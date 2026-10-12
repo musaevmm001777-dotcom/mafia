@@ -51,6 +51,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         <div><h1>Пульт ведущего</h1><p>МАФИЯ · помощник игры</p></div>
       </div>
       <div class="top-actions">
+        <button class="icon-btn" id="undoButton" aria-label="Назад на шаг" title="Назад на шаг" disabled>↶</button>
         <button class="icon-btn" id="guideButton" aria-label="Правила ролей" title="Правила ролей">?</button>
         <button class="icon-btn" id="saveButton" aria-label="Сохранить игру" title="Сохранить игру">↧</button>
       </div>
@@ -118,15 +119,14 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
               <div class="roster" id="roster"></div>
             </section>
             <section class="card side-card">
-              <div class="side-heading"><h3>Таймер обсуждения</h3><span class="counter">минуты</span></div>
-              <div class="timer" id="timerDisplay">03:00</div>
+              <div class="side-heading"><h3>Таймер слова</h3><span class="counter">30 секунд</span></div>
+              <div class="timer" id="timerDisplay">00:30</div>
               <div class="timer-controls">
                 <button class="small-btn" id="timerToggle">▶ Старт</button>
-                <button class="small-btn" id="timerReset">↺ Сброс</button>
-                <select class="small-btn" id="timerLength" aria-label="Длительность таймера">
-                  <option value="60">1 мин</option><option value="180" selected>3 мин</option><option value="300">5 мин</option><option value="600">10 мин</option>
-                </select>
+                <button class="small-btn" id="timerReset">↺ 30 сек</button>
+                <button class="small-btn" id="foulButton" disabled>⚑ Фол +30</button>
               </div>
+              <p class="counter" id="foulSummary" style="margin:10px 0 0">Фолы: 0</p>
             </section>
             <section class="card side-card">
               <div class="side-heading"><h3>Журнал игры</h3><button class="small-btn" id="exportButton">Экспорт</button></div>
@@ -151,7 +151,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       "use strict";
       const STORAGE_KEY = "mafia-host-game-v1";
       const ROLE = {
-        none: { name: "Не назначена", team: "unknown" },
+        none: { name: "Ожидает первой ночи", team: "unknown" },
         civilian: { name: "Мирный житель", team: "city" },
         mafia: { name: "Мафия", team: "mafia" },
         don: { name: "Дон мафии", team: "mafia" },
@@ -162,9 +162,9 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         capo: { name: "Капо", team: "mafia" }
       };
       const ROLE_ORDER = ["none", "civilian", "mafia", "don", "sheriff", "killer", "priestess", "detective", "capo"];
-      const UNIQUE_ROLES = ["don", "sheriff", "killer", "priestess", "detective", "capo"];
       const OPENING_STEPS = [
-        { key: "mafia", title: "Мафия и Дон", help: "Выберите Дона и отметьте всех игроков, которые показали карту Мафии." },
+        { key: "mafia", title: "Мафия", help: "Отметьте всех игроков, которые показали карту Мафии." },
+        { key: "don", title: "Дон мафии", help: "Теперь отдельно выберите игрока, который показал карту Дона." },
         { key: "sheriff", title: "Шериф", help: "Выберите игрока, который показал карту Шерифа." },
         { key: "killer", title: "Киллер", help: "Выберите игрока, который показал карту Киллера." },
         { key: "priestess", title: "Ночная жрица", help: "Выберите игрока, который показал карту Жрицы." },
@@ -191,9 +191,10 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         capo: "Играет за мафию. Каждую ночь выбирает иммунитет от голосования на следующий день; нельзя защищать себя или одну цель две ночи подряд."
       };
       let state = null;
-      let timerSeconds = 180;
+      let timerSeconds = 30;
       let timerHandle = null;
       let toastHandle = null;
+      let undoStack = [];
 
       const $ = (selector) => document.querySelector(selector);
       const setupPlayersEl = $("#setupPlayers");
@@ -216,6 +217,49 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           setupPlayersEl.append(row);
         }
       }
+      function captureState() {
+        return state ? JSON.parse(JSON.stringify(state)) : null;
+      }
+      function recordUndo(previousState, previousTimer, setup = null) {
+        const previous = { state: previousState, timerSeconds: previousTimer, setup };
+        undoStack.push(previous);
+        undoStack = undoStack.slice(-30);
+        save();
+        syncUndoButton();
+      }
+      function withUndo(action) {
+        const previousState = captureState();
+        const previousTimer = timerSeconds;
+        action();
+        if (JSON.stringify(state) !== JSON.stringify(previousState)) {
+          recordUndo(previousState, previousTimer);
+        }
+      }
+      function undoStep() {
+        const previous = undoStack.pop();
+        if (!previous) return;
+        stopTimer();
+        state = previous.state ? JSON.parse(JSON.stringify(previous.state)) : null;
+        timerSeconds = Number.isInteger(previous.timerSeconds)
+          ? previous.timerSeconds
+          : Number.isInteger(state?.speaking?.remaining) ? state.speaking.remaining : 30;
+        if (state) {
+          render();
+        } else {
+          if (previous.setup) {
+            $("#countValue").textContent = previous.setup.length;
+            playerRows(previous.setup.length, previous.setup);
+          }
+          $("#setupView").classList.add("active");
+          $("#gameView").classList.remove("active");
+        }
+        save();
+        syncUndoButton();
+        showToast("Вернулись на предыдущий шаг. Таймер остановлен.");
+      }
+      function syncUndoButton() {
+        $("#undoButton").disabled = undoStack.length === 0;
+      }
       function readSetupPlayers() {
         return [...setupPlayersEl.querySelectorAll(".player-row")].map((row, index) => ({
           id: `p${index + 1}`,
@@ -226,7 +270,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function save() {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, state, undoStack }));
         } catch (error) {
           console.error("Не удалось сохранить игру:", error);
           showToast("Не удалось сохранить игру. Проверьте свободное место браузера.");
@@ -237,7 +281,12 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           const raw = localStorage.getItem(STORAGE_KEY);
           if (!raw) return null;
           const parsed = JSON.parse(raw);
+          if (parsed?.version === 2) {
+            undoStack = Array.isArray(parsed.undoStack) ? parsed.undoStack.slice(-30) : [];
+            return parsed.state || null;
+          }
           if (!parsed || !Array.isArray(parsed.players) || !parsed.phase) return null;
+          undoStack = [];
           return parsed;
         } catch (error) {
           console.error("Не удалось прочитать сохранённую игру:", error);
@@ -269,6 +318,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function startGame() {
         const players = readSetupPlayers();
+        undoStack = [{ state: null, timerSeconds: 30, setup: players }];
         state = {
           players,
           phase: "opening",
@@ -276,6 +326,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           openingStep: 0,
           nightStep: 0,
           night: { actions: {}, protectedTarget: null, voteTarget: null },
+          speaking: { players: [], index: 0, fouls: {} },
           previous: { priestess: null, capo: null },
           priestessSaved: false,
           log: [],
@@ -285,6 +336,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         };
         addLog("Партия началась. Город засыпает для ночи знакомства.");
         save();
+        syncUndoButton();
         render();
       }
       function selectMarkup(id, { exclude = [], disabled = false, placeholder = "Выберите игрока" } = {}) {
@@ -308,9 +360,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         const assigned = state.players.filter((player) => player.role !== "none").map((player) => player.id);
         const available = alivePlayers().filter((player) => !assigned.includes(player.id));
         const roleInput = step.key === "mafia"
-          ? `<div class="action-grid">
-              <div><label class="form-label" for="openingDon">Дон мафии</label>${selectMarkup("openingDon", { placeholder: "Выберите Дона" })}</div>
-              <div><label class="form-label">Мафия — отметьте всех</label>
+          ? `<div class="action-grid one">
+              <div><label class="form-label">Игроки с картой Мафии — отметьте всех</label>
                 <div class="roster">${available.map((player) => `<label class="roster-row"><span class="roster-name">${escapeHtml(player.name)}</span><input class="opening-mafia" type="checkbox" value="${escapeHtml(player.id)}" aria-label="Игрок ${escapeHtml(player.name)} — мафия"></label>`).join("")}</div>
               </div>
             </div>`
@@ -325,6 +376,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function finishOpeningStep() {
         state.openingStep += 1;
+        if (state.openingStep === 1) addLog("Ход Мафии записан. Теперь просыпается Дон мафии.");
         if (state.openingStep >= OPENING_STEPS.length) {
           state.players.filter((player) => player.role === "none").forEach((player) => { player.role = "civilian"; });
           state.phase = "introMorning";
@@ -390,20 +442,33 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           : "Этой ночью никто не погиб. Город может проснуться.";
         const saveMessage = state.lastNightSaved ? ` Жрица спасла ${escapeHtml(label(state.lastNightSaved))}.` : "";
         return `<div class="notice ${deaths.length ? "alert" : "success"}"><span>${deaths.length ? "☀" : "✦"}</span><span>${message}${saveMessage}</span></div>
-          <div class="phase-actions"><button class="btn primary" data-action="morning-discussion">Перейти к обсуждению →</button></div>`;
+          <div class="phase-actions"><button class="btn primary" data-action="morning-discussion">${deaths.length ? "Последние слова →" : "Перейти к обсуждению →"}</button></div>`;
       }
       function discussionPanel() {
-        if (state.round === 0) {
-          return `<div class="notice">Первая ночь была ночью знакомства. Дайте игрокам представиться и объясните порядок игры.</div>
-            ${timerMarkup()}
-            <div class="phase-actions"><button class="btn primary" data-action="intro-discussion-finish">Завершить знакомство → Ночь 1</button></div>`;
-        }
-        return `<div class="notice">Город обсуждает события раунда ${state.round}. Запустите таймер, если он нужен, затем переходите к голосованию.</div>
-          ${timerMarkup()}
-          <div class="phase-actions"><button class="btn primary" data-action="to-vote">Перейти к голосованию →</button></div>`;
+        const speakers = state.speaking?.players || [];
+        const currentId = speakers[state.speaking?.index || 0];
+        const current = playerById(currentId);
+        if (!current) return `<div class="notice success">Все игроки высказались.</div>
+          <div class="phase-actions"><button class="btn primary" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство → Ночь 1" : "Перейти к голосованию →"}</button></div>`;
+        const totalFouls = Object.values(state.speaking.fouls || {}).reduce((sum, count) => sum + count, 0);
+        return `<div class="notice">${state.round === 0 ? "Круг знакомства: каждому игроку даётся по 30 секунд." : `Обсуждение раунда ${state.round}: по 30 секунд на игрока. При фоле добавляется ещё 30 секунд.`}</div>
+          <div class="action-panel">
+            <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Игрок ${state.speaking.index + 1} из ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <p class="feedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Таймер запущен автоматически. Фол добавляет игроку 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
+            <div class="phase-actions"><button class="btn primary" data-action="next-speaker">${state.speaking.index + 1 === speakers.length ? "Завершить выступления →" : "Следующий игрок →"}</button></div>
+          </div>`;
       }
-      function timerMarkup() {
-        return `<div class="action-panel"><div class="action-title"><div><h3>Обсуждение</h3><p>Таймер можно изменить справа в панели.</p></div><span class="timer" id="inlineTimer">${formatTime(timerSeconds)}</span></div></div>`;
+      function lastWordsPanel() {
+        const speakers = state.speaking?.players || [];
+        const currentId = speakers[state.speaking?.index || 0];
+        const current = playerById(currentId);
+        if (!current) return `<div class="notice success">Последние слова завершены.</div>
+          <div class="phase-actions"><button class="btn primary" data-action="start-discussion">Начать обсуждение →</button></div>`;
+        return `<div class="notice alert">После ночного выбывания каждому погибшему даётся отдельные 30 секунд на последнее слово.</div>
+          <div class="action-panel">
+            <div class="action-title"><div><h3>Последнее слово: ${escapeHtml(current.name)}</h3><p>Выбывший игрок ${state.speaking.index + 1} из ${speakers.length}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <div class="phase-actions"><button class="btn primary" data-action="next-last-word">${state.speaking.index + 1 === speakers.length ? "К обсуждению →" : "Следующее последнее слово →"}</button></div>
+          </div>`;
       }
       function votePanel() {
         const eligible = alivePlayers();
@@ -429,7 +494,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           introMorning: ["☀ Утро знакомства", "Город просыпается", "Первая ночь прошла без действий. Теперь игроки знакомятся друг с другом.", "Круг знакомства", () => `<div class="notice success">Попросите игроков по очереди представиться. Первая ночь — только знакомство.</div><div class="phase-actions"><button class="btn primary" data-action="intro-discussion">Начать круг знакомства →</button></div>`],
           discussion: ["◉ Обсуждение", state.round === 0 ? "Круг знакомства" : `День ${state.round} · обсуждение`, state.round === 0 ? "Игроки знакомятся друг с другом за столом." : "Дайте городу обсудить ночь и подозрения.", state.round === 0 ? "Знакомство" : `Раунд ${state.round}`, discussionPanel],
           night: ["☾ Ночь", `Ночь ${state.round}`, "Город засыпает. Записывайте действия ролей по очереди; результаты увидит только ведущий.", `Раунд ${state.round}`, nightPanel],
-          morning: ["☀ Утро", `Утро · раунд ${state.round}`, "Сводка ночи готова. Объявите игрокам только итог, затем начинайте обсуждение.", `Раунд ${state.round}`, morningPanel],
+          morning: ["☀ Утро", `Утро · раунд ${state.round}`, "Объявите игрокам результат ночи. Выбывшие смогут сказать последнее слово перед обсуждением.", `Раунд ${state.round}`, morningPanel],
+          lastWords: ["☀ Последние слова", `После ночи ${state.round}`, "Каждому выбывшему даётся по 30 секунд на последнее слово.", `${state.speaking.index + 1} / ${state.speaking.players.length}`, lastWordsPanel],
           vote: ["⚖ Голосование", `Голосование · раунд ${state.round}`, "Отметьте решение города. При защите Капо большинство голосов не выгоняет игрока.", `Раунд ${state.round}`, votePanel],
           ended: ["✦ Игра окончена", "Партия завершена", "Итог определён по заданным условиям победы.", "Итог", endingPanel]
         };
@@ -446,8 +512,10 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         $("#aliveCount").textContent = `${alive} / ${state.players.length} в игре`;
         list.innerHTML = state.players.map((player) => `<div class="roster-row ${player.alive ? "" : "dead"}">
           <span class="roster-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>
-          <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}</span>
+          <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}${state.speaking?.fouls?.[player.id] ? ` · ⚑ ${state.speaking.fouls[player.id]}` : ""}</span>
         </div>`).join("");
+        const totalFouls = Object.values(state.speaking?.fouls || {}).reduce((sum, count) => sum + count, 0);
+        $("#foulSummary").textContent = `Фолы: ${totalFouls}`;
       }
       function renderLog() {
         const log = $("#eventLog");
@@ -470,6 +538,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         renderRoster();
         renderLog();
         updateTimerDisplay();
+        syncTimerControls();
+        syncUndoButton();
       }
       function setPhase(phase) {
         state.phase = phase;
@@ -477,12 +547,76 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         render();
       }
       function beginNight() {
+        stopTimer();
         state.round += 1;
         state.night = { actions: {}, protectedTarget: null, voteTarget: null };
         state.nightStep = nextActorIndex(0);
         if (state.nightStep < 0) state.nightStep = NIGHT_STEPS.length;
         addLog(`Началась ночь ${state.round}.`);
         setPhase("night");
+      }
+      function startLastWords() {
+        const deaths = state.lastNightDeaths || [];
+        if (!deaths.length) {
+          startDiscussion();
+          return;
+        }
+        stopTimer();
+        state.speaking = { ...(state.speaking || {}), kind: "lastWords", players: deaths.slice(), index: 0, remaining: 30, fouls: state.speaking?.fouls || {} };
+        timerSeconds = 30;
+        addLog(`Последние слова: каждому из ${deaths.length} выбывших отведено по 30 секунд.`);
+        setPhase("lastWords");
+        toggleTimer();
+      }
+      function startDiscussion() {
+        stopTimer();
+        state.speaking = {
+          ...(state.speaking || {}),
+          kind: "discussion",
+          players: alivePlayers().map((player) => player.id),
+          index: 0,
+          remaining: 30,
+          fouls: state.speaking?.fouls || {}
+        };
+        timerSeconds = 30;
+        addLog(state.round === 0 ? "Начался круг знакомства: каждому игроку дано 30 секунд." : `Началось обсуждение раунда ${state.round}: каждому игроку дано 30 секунд.`);
+        setPhase("discussion");
+        toggleTimer();
+      }
+      function advanceSpeaker() {
+        stopTimer();
+        state.speaking.index += 1;
+        state.speaking.remaining = 30;
+        timerSeconds = 30;
+        if (state.speaking.index >= state.speaking.players.length) {
+          if (state.speaking.kind === "lastWords") {
+            startDiscussion();
+            return;
+          }
+          finishDiscussion();
+          return;
+        }
+        const player = playerById(state.speaking.players[state.speaking.index]);
+        addLog(`${state.speaking.kind === "lastWords" ? "Последнее слово" : "Слово"}: очередь игрока ${player?.name || ""}.`);
+        save();
+        render();
+        toggleTimer();
+      }
+      function finishDiscussion() {
+        stopTimer();
+        if (state.round === 0) {
+          addLog("Круг знакомства завершён.");
+          beginNight();
+          return;
+        }
+        state.phase = "vote";
+        addLog(`Обсуждение раунда ${state.round} завершено.`);
+        save();
+        render();
+      }
+      function stopTimer() {
+        if (timerHandle) clearInterval(timerHandle);
+        timerHandle = null;
       }
       function submitNight(stepKey) {
         const step = currentNightStep();
@@ -639,35 +773,64 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function updateTimerDisplay() {
         $("#timerDisplay").textContent = formatTime(timerSeconds);
-        const inline = $("#inlineTimer");
-        if (inline) inline.textContent = formatTime(timerSeconds);
+        document.querySelectorAll(".phase-content .timer").forEach((display) => {
+          display.textContent = formatTime(timerSeconds);
+        });
+      }
+      function syncTimerControls() {
+        const active = state && ["discussion", "lastWords"].includes(state.phase);
+        const inDiscussion = state?.phase === "discussion" && state.speaking?.players?.[state.speaking.index];
+        $("#timerToggle").disabled = !active || !state.speaking?.players?.[state.speaking.index];
+        $("#timerReset").disabled = !active || !state.speaking?.players?.[state.speaking.index];
+        $("#foulButton").disabled = !inDiscussion;
+        $("#timerToggle").textContent = timerHandle ? "Ⅱ Пауза" : "▶ Старт";
       }
       function toggleTimer() {
         if (timerHandle) {
-          clearInterval(timerHandle);
-          timerHandle = null;
-          $("#timerToggle").textContent = "▶ Старт";
+          stopTimer();
+          syncTimerControls();
           return;
         }
+        if (!state || !["discussion", "lastWords"].includes(state.phase) ||
+            !state.speaking?.players?.[state.speaking.index]) return;
+        if (timerSeconds <= 0) timerSeconds = 30;
         $("#timerToggle").textContent = "Ⅱ Пауза";
         timerHandle = setInterval(() => {
           timerSeconds = Math.max(0, timerSeconds - 1);
+          state.speaking.remaining = timerSeconds;
+          save();
           updateTimerDisplay();
           if (!timerSeconds) {
-            clearInterval(timerHandle);
-            timerHandle = null;
-            $("#timerToggle").textContent = "▶ Старт";
-            showToast("Время обсуждения закончилось.");
+            stopTimer();
+            syncTimerControls();
+            showToast("Время игрока закончилось.");
             if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
           }
         }, 1000);
       }
       function resetTimer() {
-        if (timerHandle) clearInterval(timerHandle);
-        timerHandle = null;
-        timerSeconds = Number($("#timerLength").value);
-        $("#timerToggle").textContent = "▶ Старт";
+        stopTimer();
+        timerSeconds = 30;
+        if (state?.speaking) state.speaking.remaining = timerSeconds;
+        if (state) save();
         updateTimerDisplay();
+        syncTimerControls();
+      }
+      function addFoulTime() {
+        if (state?.phase !== "discussion") return;
+        const playerId = state.speaking?.players?.[state.speaking.index];
+        if (!playerId) return;
+        state.speaking.fouls[playerId] = (state.speaking.fouls[playerId] || 0) + 1;
+        timerSeconds += 30;
+        state.speaking.remaining = timerSeconds;
+        addLog(`Фол игроку ${label(playerId)}: +30 секунд. Всего фолов игрока: ${state.speaking.fouls[playerId]}.`);
+        save();
+        if (!timerHandle) toggleTimer();
+        renderRoster();
+        updateTimerDisplay();
+        syncTimerControls();
+        const counter = $("#phaseContent .feedback");
+        if (counter) counter.textContent = `Добавлено 30 секунд. Фолы игрока: ${state.speaking.fouls[playerId]}.`;
       }
       function exportGame() {
         const data = {
@@ -713,11 +876,16 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         openModal("Завершить эту партию?", "<p>Текущая игра будет заменена новой. Если хотите сохранить историю, сначала экспортируйте её.</p>", [
           { text: "Отмена" },
           { text: "Новая партия", primary: true, callback: () => {
+            const previousState = captureState();
+            const previousPlayers = state.players.map((player) => ({ ...player }));
+            const previousTimer = timerSeconds;
+            undoStack = [];
             state = null;
-            localStorage.removeItem(STORAGE_KEY);
+            recordUndo(previousState, previousTimer, previousPlayers);
             $("#setupView").classList.add("active");
             $("#gameView").classList.remove("active");
-            playerRows(Number($("#countValue").textContent), []);
+            $("#countValue").textContent = "6";
+            playerRows(6, []);
           } }
         ]);
       }
@@ -725,19 +893,11 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         if (action === "opening-next") {
           const step = OPENING_STEPS[state.openingStep];
           if (step.key === "mafia") {
-            const don = $("#openingDon").value;
             const mafia = [...document.querySelectorAll(".opening-mafia:checked")].map((input) => input.value);
-            if (!don && !mafia.length) {
-              showToast("Отметьте Дона или мафию либо пропустите этот этап.");
-              return;
-            }
-            if (don && mafia.includes(don)) {
-              showToast("Один игрок не может быть одновременно Доном и обычной мафией.");
-              return;
-            }
-            if (don) playerById(don).role = "don";
             mafia.forEach((id) => { playerById(id).role = "mafia"; });
-            addLog(`Первая ночь: записаны роли Дона и мафии${don ? `; Дон — ${label(don)}` : ""}${mafia.length ? `; мафия — ${mafia.map(label).join(", ")}` : ""}.`);
+            addLog(mafia.length
+              ? `Первая ночь: роль «Мафия» записана игрокам: ${mafia.map(label).join(", ")}.`
+              : "Первая ночь: обычная мафия не отмечена.");
           } else {
             const id = $("#openingRolePlayer").value;
             if (!id) {
@@ -756,16 +916,24 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           state.players.filter((player) => player.role === "none").forEach((player) => { player.role = "civilian"; });
           state.phase = "introMorning"; save(); render();
         } else if (action === "intro-discussion") {
-          state.phase = "discussion"; addLog("Город начал круг знакомства."); save(); render();
+          startDiscussion();
         } else if (action === "intro-discussion-finish") {
-          addLog("Круг знакомства завершён."); beginNight();
+          finishDiscussion();
         } else if (action === "submit-night") {
           submitNight(NIGHT_STEPS[Number(button.dataset.step)]?.key);
         } else if (action === "resolve-night") resolveNight();
         else if (action === "morning-discussion") {
-          state.phase = "discussion"; addLog(`Началось обсуждение раунда ${state.round}.`); save(); render();
+          startLastWords();
         } else if (action === "to-vote") {
           state.phase = "vote"; addLog(`Началось голосование раунда ${state.round}.`); save(); render();
+        } else if (action === "next-speaker" || action === "next-last-word") {
+          const playerId = state.speaking?.players?.[state.speaking.index];
+          if (playerId) addLog(`${state.speaking.kind === "lastWords" ? "Последнее слово завершено" : "Выступление завершено"}: ${label(playerId)}.`);
+          advanceSpeaker();
+        } else if (action === "finish-discussion") {
+          finishDiscussion();
+        } else if (action === "start-discussion") {
+          startDiscussion();
         } else if (action === "resolve-vote") resolveVote();
         else if (action === "new-game") confirmNewGame();
         else if (action === "export") exportGame();
@@ -789,9 +957,10 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         else showToast("Сначала начните игру.");
       });
       $("#exportButton").addEventListener("click", exportGame);
+      $("#undoButton").addEventListener("click", undoStep);
       $("#timerToggle").addEventListener("click", toggleTimer);
       $("#timerReset").addEventListener("click", resetTimer);
-      $("#timerLength").addEventListener("change", resetTimer);
+      $("#foulButton").addEventListener("click", () => withUndo(addFoulTime));
       $("#hostNote").addEventListener("input", (event) => {
         if (!state) return;
         state.note = event.target.value;
@@ -799,7 +968,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       });
       document.addEventListener("click", (event) => {
         const button = event.target.closest("[data-action]");
-        if (button) handleAction(button.dataset.action, button);
+        if (button) withUndo(() => handleAction(button.dataset.action, button));
         if (event.target === $("#modalBackdrop")) $("#modalBackdrop").classList.remove("open");
       });
       document.addEventListener("change", (event) => {
@@ -825,7 +994,16 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       playerRows(6);
       state = loadSaved();
-      if (state) render();
+      if (state) {
+        if (!state.speaking) state.speaking = { players: [], index: 0, fouls: {} };
+        if (!state.speaking.fouls) state.speaking.fouls = {};
+        timerSeconds = Number.isInteger(state.speaking.remaining) ? state.speaking.remaining : 30;
+        render();
+      } else {
+        updateTimerDisplay();
+        syncTimerControls();
+      }
+      syncUndoButton();
     })();
   </script>
 </body>
