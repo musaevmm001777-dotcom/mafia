@@ -3,19 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Помощник Ведущего Мафии</title>
+  <title>Мафия: Панель Ведущего</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg-color: #1a1a1a;
-      --card-bg: #2a2a2a;
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
       --accent: #d32f2f;
+      --accent-hover: #b71c1c;
       --text: #ffffff;
-      --subtext: #aaaaaa;
-      --border: #444444;
+      --subtext: #b0b0b0;
+      --border: #333333;
+      --success: #2e7d32;
+      --warning: #f57c00;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-color);
       color: var(--text);
       margin: 0;
@@ -23,9 +26,9 @@
       box-sizing: border-box;
       user-select: none;
     }
-    h2, h3 { text-align: center; margin: 8px 0; }
+    h2, h3, h4 { text-align: center; margin: 6px 0; color: #ff5252; }
     .screen { display: none; }
-    .active { display: block; }
+    .screen.active { display: block; }
     .btn {
       background-color: var(--accent);
       color: #fff;
@@ -35,83 +38,155 @@
       border-radius: 8px;
       font-weight: bold;
       font-size: 16px;
-      margin-top: 10px;
+      margin-top: 12px;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    .btn-secondary { background-color: #555; }
-    .player-card {
+    .btn:active { background-color: var(--accent-hover); }
+    .btn-secondary { background-color: #424242; }
+    .btn-secondary:active { background-color: #616161; }
+    .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 8px;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .player-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #252525;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
     }
-    .player-card.dead { opacity: 0.4; text-decoration: line-through; }
+    .player-row.dead { opacity: 0.4; text-decoration: line-through; }
     select, input {
-      background: #333;
+      background: #2c2c2c;
       color: #fff;
       border: 1px solid var(--border);
-      padding: 6px;
-      border-radius: 4px;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 4px;
     }
-    .foul-btn {
-      background: #e65100;
-      color: white;
-      border: none;
+    .badge {
+      font-size: 11px;
+      padding: 3px 6px;
       border-radius: 4px;
-      padding: 4px 8px;
-      margin-left: 5px;
+      background: #333;
+      color: #ddd;
+      font-weight: 500;
     }
+    .badge-mafia { background: #5c0000; color: #ff8a80; }
+    .badge-town { background: #003366; color: #80d8ff; }
+    .badge-solo { background: #4a148c; color: #ea80fc; }
     .log-box {
-      background: #000;
+      background: #080808;
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 10px;
-      height: 120px;
+      height: 140px;
       overflow-y: auto;
       font-size: 12px;
       font-family: monospace;
       margin-top: 10px;
+      color: #ccc;
+      line-height: 1.4;
     }
-    .badge {
-      font-size: 11px;
-      padding: 2px 6px;
+    .action-group {
+      background: #222;
+      border-left: 4px solid var(--accent);
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 0 8px 8px 0;
+    }
+    .hint-box {
+      background: #1b3320;
+      border: 1px solid #2e7d32;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 6px;
+      font-size: 13px;
+      color: #a5d6a7;
+    }
+    .flex-row { display: flex; gap: 8px; }
+    .small-btn {
+      padding: 4px 8px;
+      font-size: 12px;
       border-radius: 4px;
-      background: #444;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <!-- ЭКРАН 1: НАСТРОЙКА ИГРЫ -->
+  <!-- ЭКРАН 1: НАСТРОЙКА ИГРЫ И НИКОВ -->
   <div id="setup-screen" class="screen active">
-    <h2>🎮 Настройка игры</h2>
-    <label>Количество игроков: </label>
-    <select id="player-count" onchange="generateSetup()">
-      <option value="6">6</option>
-      <option value="8">8</option>
-      <option value="10" selected>10</option>
-      <option value="12">12</option>
-    </select>
+    <h2>🎭 Настройка игры Мафия</h2>
+    <div class="card">
+      <label>Количество игроков (1 - 16):</label>
+      <input type="number" id="player-count" min="1" max="16" value="10" onchange="generatePlayerInputs()">
+    </div>
     
-    <div id="roles-assign" style="margin-top:15px;"></div>
-    <button class="btn" onclick="startGame()">Начать игру</button>
+    <div id="players-config-container"></div>
+    <button class="btn" onclick="initGame()">Сохранить и начать игру</button>
   </div>
 
-  <!-- ЭКРАН 2: ПАНЕЛЬ ВЕДУЩЕГО -->
-  <div id="game-screen" class="screen">
-    <h3 id="phase-title">🌙 Фаза: Ночь 1</h3>
-    <div id="action-panel" style="background:#333; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
-    
-    <h3>📋 Список игроков</h3>
-    <div id="players-list"></div>
+  <!-- ЭКРАН 2: ПЕРВАЯ НОЧЬ (ЗНАКОМСТВО) -->
+  <div id="first-night-screen" class="screen">
+    <h2>🌙 Ночь 1: Знакомство</h2>
+    <div class="card" id="first-night-content"></div>
+    <button class="btn" onclick="finishFirstNight()">Закончить ночь знакомства $\rightarrow$ Утро 1</button>
+  </div>
 
-    <h3>📜 Лог событий</h3>
+  <!-- ЭКРАН 3: УТРО 1 (ЗНАКОМСТВО И ОБСУЖДЕНИЕ) -->
+  <div id="morning-screen" class="screen">
+    <h2>☀️ Утро 1: Знакомство игроков</h2>
+    <div class="card">
+      <p style="text-align: center; color: var(--subtext);">Проведите круг знакомства игроков. Никто не убит в первую ночь.</p>
+    </div>
+    <h3>📋 Игроки за столом</h3>
+    <div id="morning-players-list"></div>
+    <button class="btn" onclick="startRegularNight(2)">Перейти к Ночи 2</button>
+  </div>
+
+  <!-- ЭКРАН 4: РЕГУЛЯРНАЯ НОЧЬ -->
+  <div id="night-screen" class="screen">
+    <h2 id="night-title">🌙 Ночь X</h2>
+    <div class="card" id="night-actions-container"></div>
+    <button class="btn" onclick="processNightResults()">Обработать итоги ночи</button>
+  </div>
+
+  <!-- ЭКРАН 5: ИТОГИ НОЧИ И ДЕНЬ -->
+  <div id="day-screen" class="screen">
+    <h2 id="day-title">☀️ День X</h2>
+    <div class="card" id="night-results-announcement"></div>
+    
+    <h3>📋 Статус игроков</h3>
+    <div id="day-players-list"></div>
+
+    <button class="btn" onclick="openVotingScreen()">Перейти к голосованию</button>
+  </div>
+
+  <!-- ЭКРАН 6: ГОЛОСОВАНИЕ -->
+  <div id="voting-screen" class="screen">
+    <h2>🗳️ Дневное голосование</h2>
+    <div class="card">
+      <p style="font-size:13px; color:var(--subtext);">Отметьте голоса против выставленных игроков:</p>
+      <div id="voting-inputs-container"></div>
+    </div>
+    <button class="btn" onclick="finalizeVoting()">Завершить голосование и выгнать</button>
+  </div>
+
+  <!-- ЛОГ ИСТОРИИ (ВСЕГДА ВИДИМЫЙ В ОСНОВНЫХ ФАЗАХ) -->
+  <div id="persistent-log-container" style="display:none; margin-top:15px;">
+    <h4 style="text-align: left; margin-bottom: 4px;">📜 Лог событий игры</h4>
     <div id="game-log" class="log-box"></div>
-    <button class="btn btn-secondary" onclick="nextPhase()">Перейти к следующей фазе</button>
   </div>
 
   <script>
@@ -119,155 +194,441 @@
     if (tg) tg.expand();
 
     const ROLES = [
-      "Мирный житель", "Шериф", "Сыщик", "Ночная жрица",
-      "Мафия", "Дон Мафии", "Капо", "Киллер"
+      "Мирный житель", 
+      "Шериф", 
+      "Сыщик", 
+      "Ночная жрица", 
+      "Мафия", 
+      "Дон Мафии", 
+      "Капо", 
+      "Киллер"
     ];
 
     let players = [];
-    let currentPhase = 'NIGHT'; // NIGHT или DAY
-    let dayCount = 1;
-    let nightActions = { shot: null, priestTarget: null, capoTarget: null };
-    let lastPriestTarget = null;
-    let lastCapoTarget = null;
+    let currentDay = 1;
+    let firstNightStep = 0;
+    let gameLogHistory = [];
+    
+    // Переменные ночных выборов
+    let nightData = {
+      mafiaShot: "",
+      donCheck: "",
+      sheriffCheck: "",
+      killerShot: "",
+      detectiveTarget1: "",
+      detectiveTarget2: "",
+      priestTarget: ""
+    };
 
-    function generateSetup() {
+    let lastPriestTarget = null;
+    let priestSelfSavedUsed = false;
+
+    // Инициализация полей ввода игроков при старте
+    function generatePlayerInputs() {
       const count = parseInt(document.getElementById('player-count').value);
-      const container = document.getElementById('roles-assign');
+      const container = document.getElementById('players-config-container');
       container.innerHTML = '';
+      
       for (let i = 1; i <= count; i++) {
         container.innerHTML += `
-          <div style="margin-bottom:5px;">
-            <span>Игрок ${i}: </span>
-            <select id="role-${i}">
-              ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
-            </select>
-          </div>`;
+          <div class="card" style="margin-bottom:8px; padding:8px;">
+            <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">Игрок #${i}</div>
+            <div class="flex-row">
+              <input type="text" id="nick-${i}" value="Игрок ${i}" placeholder="Никнейм">
+              <select id="role-${i}">
+                ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        `;
       }
     }
+    generatePlayerInputs();
 
-    function startGame() {
+    function initGame() {
       const count = parseInt(document.getElementById('player-count').value);
       players = [];
       for (let i = 1; i <= count; i++) {
         players.push({
           id: i,
+          nickname: document.getElementById(`nick-${i}`).value.trim() || `Игрок ${i}`,
           role: document.getElementById(`role-${i}`).value,
           alive: true,
-          fouls: 0,
-          selfSaved: false
+          fouls: 0
         });
       }
+
       document.getElementById('setup-screen').classList.remove('active');
-      document.getElementById('game-screen').classList.add('active');
-      log("🟢 Игра началась! Наступает Ночь 1.");
-      renderGame();
-    }
-
-    function renderGame() {
-      document.getElementById('phase-title').innerText = 
-        currentPhase === 'NIGHT' ? `🌙 Фаза: Ночь ${dayCount}` : `☀️ Фаза: День ${dayCount}`;
+      document.getElementById('first-night-screen').classList.add('active');
+      document.getElementById('persistent-log-container').style.display = 'block';
       
-      renderActionPanel();
-      renderPlayers();
+      logMessage("🎮 Игра инициализирована. Начинается ночь знакомства.");
+      renderFirstNightStep();
     }
 
-    function renderPlayers() {
-      const list = document.getElementById('players-list');
-      list.innerHTML = '';
-      players.forEach(p => {
-        list.innerHTML += `
-          <div class="player-card ${p.alive ? '' : 'dead'}">
-            <div>
-              <strong>#${p.id}</strong> — <span class="badge">${p.role}</span>
-              ${p.fouls > 0 ? `<span style="color:yellow"> ⚠️${p.fouls}</span>` : ''}
-            </div>
-            <div>
-              ${p.alive ? `<button class="foul-btn" onclick="addFoul(${p.id})">+Фол</button>` : ''}
-              ${p.alive ? `<button class="foul-btn" style="background:#b71c1c" onclick="killPlayer(${p.id})">Убить</button>` : ''}
-            </div>
-          </div>`;
-      });
-    }
-
-    function renderActionPanel() {
-      const panel = document.getElementById('action-panel');
-      if (currentPhase === 'NIGHT') {
-        panel.innerHTML = `
-          <strong>Ночные действия:</strong><br>
-          <label>🎯 Выстрел Мафии/Дона: </label>
-          <select id="night-shot"><option value="">-- Промах --</option>${getAliveOptions()}</select><br><br>
-          <label>🛡️ Защита Жрицы: </label>
-          <select id="night-priest"><option value="">-- Никого --</option>${getAliveOptions()}</select><br><br>
-          <label>🔰 Иммунитет Капо: </label>
-          <select id="night-capo"><option value="">-- Никого --</option>${getAliveOptions()}</select>
-        `;
-      } else {
-        panel.innerHTML = `<strong>☀️ Дневное обсуждение и голосование.</strong><br>Отмечайте фолы или выбывание игроков вручную.`;
+    function logMessage(text) {
+      gameLogHistory.push(text);
+      const box = document.getElementById('game-log');
+      if (box) {
+        box.innerHTML = gameLogHistory.map(l => `<div>${l}</div>`).join('');
+        box.scrollTop = box.scrollHeight;
       }
     }
 
-    function getAliveOptions() {
-      return players.filter(p => p.alive).map(p => `<option value="${p.id}">Игрок ${p.id}</option>`).join('');
+    // Логика первой ночи знакомства по шагам
+    const firstNightStepsDesc = [
+      { title: "1. Дон мафии и Мафия", desc: "Ведущий будит Дон мафии и Мафию. Они знакомятся друг с другом." },
+      { title: "2. Шериф", desc: "Ведущий будит Шерифа, тот знакомится с ведущим." },
+      { title: "3. Киллер", desc: "Ведущий будит Киллера, тот знакомится с ведущим." },
+      { title: "4. Ночная жрица", desc: "Ведущий будит Жрицу, она знакомится с ведущим." },
+      { title: "5. Сыщик", desc: "Ведущий будит Сыщика, он знакомится с ведущим." }
+    ];
+
+    function renderFirstNightStep() {
+      const container = document.getElementById('first-night-content');
+      if (firstNightStep < firstNightStepsDesc.length) {
+        let stepInfo = firstNightStepsDesc[firstNightStep];
+        container.innerHTML = `
+          <h3>${stepInfo.title}</h3>
+          <p>${stepInfo.desc}</p>
+          <button class="btn" onclick="nextFirstNightStep()">Далее $\rightarrow$</button>
+        `;
+      }
+    }
+
+    function nextFirstNightStep() {
+      firstNightStep++;
+      if (firstNightStep < firstNightStepsDesc.length) {
+        renderFirstNightStep();
+      } else {
+        document.getElementById('first-night-screen').classList.remove('active');
+        document.getElementById('morning-screen').classList.add('active');
+        renderMorning1();
+        logMessage("☀️ Наступило Утро 1. Круг знакомства.");
+      }
+    }
+
+    function renderMorning1() {
+      const list = document.getElementById('morning-players-list');
+      list.innerHTML = players.map(p => `
+        <div class="player-row">
+          <div><strong>#${p.id} ${p.nickname}</strong></div>
+          <div><span class="badge ${getRoleBadgeClass(p.role)}">${p.role}</span></div>
+        </div>
+      `).join('');
+    }
+
+    function getRoleBadgeClass(role) {
+      if (["Мафия", "Дон Мафии", "Капо"].includes(role)) return "badge-mafia";
+      if (["Киллер"].includes(role)) return "badge-solo";
+      return "badge-town";
+    }
+
+    function startRegularNight(dayNum) {
+      currentDay = dayNum;
+      document.getElementById('morning-screen').classList.remove('active');
+      document.getElementById('day-screen').classList.remove('active');
+      document.getElementById('night-screen').classList.add('active');
+      
+      document.getElementById('night-title').innerText = `🌙 Ночь ${currentDay}`;
+      renderRegularNightActions();
+      logMessage(`🌙 Наступила Ночь ${currentDay}`);
+    }
+
+    function renderRegularNightActions() {
+      const container = document.getElementById('night-actions-container');
+      const aliveOpts = `<option value="">-- Никого / Пропуск --</option>` + 
+        players.filter(p => p.alive).map(p => `<option value="${p.id}">#${p.id} ${p.nickname} (${p.role})</option>`).join('');
+
+      container.innerHTML = `
+        <div class="action-group">
+          <strong>1. Дон мафии и Мафия (Выстрел):</strong>
+          <select id="n-shot">${aliveOpts}</select>
+        </div>
+
+        <div class="action-group">
+          <strong>2. Дон мафии (Поиск Шерифа):</strong>
+          <select id="n-don-check">${aliveOpts}</select>
+        </div>
+
+        <div class="action-group">
+          <strong>3. Шериф (Поиск Мафии):</strong>
+          <select id="n-sheriff-check">${aliveOpts}</select>
+          <div id="sheriff-hint" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="action-group">
+          <strong>4. Киллер (Выбор жертвы):</strong>
+          <select id="n-killer">${aliveOpts}</select>
+        </div>
+
+        <div class="action-group">
+          <strong>5. Сыщик (Сравнение 2 игроков):</strong>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <select id="n-det-1">${aliveOpts}</select>
+            <select id="n-det-2">${aliveOpts}</select>
+          </div>
+          <div id="detective-hint" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="action-group">
+          <strong>6. Ночная жрица (Лечение):</strong>
+          <select id="n-priest">${aliveOpts}</select>
+          <div id="priest-warning" style="margin-top:6px; font-size:12px; color:#ffcc80;"></div>
+        </div>
+      `;
+
+      // Добавим обработчики для интерактивных подсказок Ведущему в реальном времени
+      document.getElementById('n-sheriff-check').addEventListener('change', (e) => {
+        let targetId = e.target.value;
+        let hintDiv = document.getElementById('sheriff-hint');
+        if (!targetId) { hintDiv.innerHTML = ""; return; }
+        let targetPlayer = players.find(p => p.id == targetId);
+        // Если мафия/дон/капо -> ведущий показывает 👎 (черная проверка), если мирный/киллер -> 👍
+        if (["Мафия", "Дон Мафии", "Капо"].includes(targetPlayer.role)) {
+          hintDiv.innerHTML = `<div class="hint-box" style="background:#421111; border-color:#d32f2f; color:#ff8a80;">👉 Подсказка ведущему: покажите жест <b>👎</b> (Шериф обнаружил мафию)</div>`;
+        } else {
+          hintDiv.innerHTML = `<div class="hint-box">👉 Подсказка ведущему: покажите жест <b>👍</b> (Шериф обнаружил мирного игрока или киллера)</div>`;
+        }
+      });
+
+      document.getElementById('n-det-1').addEventListener('change', updateDetectiveHint);
+      document.getElementById('n-det-2').addEventListener('change', updateDetectiveHint);
+      document.getElementById('n-priest').addEventListener('change', updatePriestWarning);
+    }
+
+    function updateDetectiveHint() {
+      let id1 = document.getElementById('n-det-1').value;
+      let id2 = document.getElementById('n-det-2').value;
+      let hintDiv = document.getElementById('detective-hint');
+      if (!id1 || !id2) { hintDiv.innerHTML = ""; return; }
+      
+      let p1 = players.find(p => p.id == id1);
+      let p2 = players.find(p => p.id == id2);
+      
+      let mafiaTeam = ["Мафия", "Дон Мафии", "Капо"];
+      let is1Mafia = mafiaTeam.includes(p1.role);
+      let is2Mafia = mafiaTeam.includes(p2.role);
+
+      // Если оба в мафии или оба мирные/городские (включая сыщика, жрицу, шерифа, мирных) — одинаковые команды (👍👍).
+      // Киллер играет сам за себя, поэтому с кем угодно другим — разные команды (👍👎).
+      let team1 = is1Mafia ? 'mafia' : (p1.role === 'Киллер' ? 'killer' : 'town');
+      let team2 = is2Mafia ? 'mafia' : (p2.role === 'Киллер' ? 'killer' : 'town');
+
+      if (team1 === team2 && team1 !== 'killer') {
+        hintDiv.innerHTML = `<div class="hint-box">👉 Подсказка Сыщику: покажите <b>👍 👍</b> (Оба в одной команде)</div>`;
+      } else {
+        hintDiv.innerHTML = `<div class="hint-box" style="background:#3d2c1e; border-color:#f57c00; color:#ffe0b2;">👉 Подсказка Сыщику: покажите <b>👍 👎</b> (Игроки из разных команд)</div>`;
+      }
+    }
+
+    function updatePriestWarning() {
+      let priestId = document.getElementById('n-priest').value;
+      let warnDiv = document.getElementById('priest-warning');
+      if (!priestId) { warnDiv.innerHTML = ""; return; }
+
+      let msg = [];
+      if (lastPriestTarget && priestId == lastPriestTarget) {
+        msg.push("⚠️ Внимание: Жрица лечит этого же игрока второй раз подряд! Правило запрещает.");
+      }
+      warnDiv.innerHTML = msg.join('<br>');
+    }
+
+    function processNightResults() {
+      let mafiaShotId = document.getElementById('n-shot').value;
+      let donCheckId = document.getElementById('n-don-check').value;
+      let sheriffCheckId = document.getElementById('n-sheriff-check').value;
+      let killerShotId = document.getElementById('n-killer').value;
+      let priestId = document.getElementById('n-priest').value;
+
+      // Проверка правил Жрицы
+      if (priestId) {
+        if (lastPriestTarget && priestId == lastPriestTarget) {
+          alert("Ошибка правил Жрицы: нельзя выбирать одного и того же игрока два раза подряд!");
+          return;
+        }
+        lastPriestTarget = priestId;
+      } else {
+        lastPriestTarget = null;
+      }
+
+      let nightVictims = [];
+
+      // Обработка выстрела мафии
+      if (mafiaShotId) {
+        if (mafiaShotId === priestId) {
+          logMessage(`🛡️ Ночью в игрока #${mafiaShotId} стреляла мафия, но Ночная жрица его спасла!`);
+        } else {
+          nightVictims.push(mafiaShotId);
+        }
+      }
+
+      // Обработка выстрела киллера
+      if (killerShotId) {
+        if (killerShotId === priestId) {
+          logMessage(`🛡️ Ночью в игрока #${killerShotId} стрелял киллер, но Ночная жрица его спасла!`);
+        } else {
+          if (!nightVictims.includes(killerShotId)) {
+            nightVictims.push(killerShotId);
+          }
+        }
+      }
+
+      // Убиваем жертв
+      let deadNicks = [];
+      nightVictims.forEach(vId => {
+        let victim = players.find(p => p.id == vId);
+        if (victim && victim.alive) {
+          victim.alive = false;
+          deadNicks.name = victim.nickname;
+          deadNicks.push(`#${victim.id} ${victim.nickname} (${victim.role})`);
+        }
+      });
+
+      // Проверка Дона на Шерифа
+      let donMessage = "";
+      if (donCheckId) {
+        let checkedP = players.find(p => p.id == donCheckId);
+        if (checkedP && checkedP.role === "Шериф") {
+          donMessage = `🎯 Дон мафии нашел Шерифа (#${checkedP.id} ${checkedP.nickname})!`;
+        } else {
+          donMessage = `🎯 Дон мафии проверил игрока #${checkedP.id}, это не Шериф.`;
+        }
+        logMessage(donMessage);
+      }
+
+      // Формирование объявления для ведущего
+      let announcement = "";
+      if (deadNicks.length > 0) {
+        announcement = `💀 <b>Этой ночью погибли:</b><br>${deadNicks.join('<br>')}`;
+        logMessage(`💀 Ночью погибли: ${deadNicks.join(', ')}`);
+      } else {
+        announcement = `🕊️ <b>Город спал спокойно:</b> этой ночью никто не погиб.`;
+        logMessage(`🕊️ Ночь прошла без жертв.`);
+      }
+
+      document.getElementById('night-screen').classList.remove('active');
+      document.getElementById('day-screen').classList.add('active');
+      document.getElementById('day-title').innerText = `☀️ День ${currentDay}`;
+      document.getElementById('night-results-announcement').innerHTML = announcement;
+
+      renderDayPlayers();
+      checkWinConditions();
+    }
+
+    function renderDayPlayers() {
+      let list = document.getElementById('day-players-list');
+      list.innerHTML = players.map(p => `
+        <div class="player-row ${p.alive ? '' : 'dead'}">
+          <div>
+            <strong>#${p.id} ${p.nickname}</strong> 
+            <span class="badge">${p.role}</span>
+            ${p.fouls > 0 ? `<span style="color:var(--warning); font-size:12px;"> ⚠️${p.fouls} фола</span>` : ''}
+          </div>
+          <div>
+            ${p.alive ? `<button class="small-btn" style="background:#e65100; color:#fff;" onclick="addFoul(${p.id})">+Фол</button>` : ''}
+            ${p.alive ? `<button class="small-btn" style="background:#b71c1c; color:#fff;" onclick="killPlayerManual(${p.id})">Убить</button>` : ''}
+          </div>
+        </div>
+      `).join('');
     }
 
     function addFoul(id) {
-      const p = players.find(x => x.id === id);
+      let p = players.find(x => x.id === id);
       if (p) {
         p.fouls++;
-        log(`⚠️ Игрок #${p.id} получил фол (${p.fouls}/4)`);
+        logMessage(`⚠️ Игрок #${p.id} ${p.nickname} получил фол (${p.fouls}/4).`);
         if (p.fouls >= 4) {
           p.alive = false;
-          log(`❌ Игрок #${p.id} дисквалифицирован за 4 фола!`);
+          logMessage(`❌ Игрок #${p.id} ${p.nickname} дисквалифицирован за 4 фола!`);
         }
-        renderGame();
+        renderDayPlayers();
       }
     }
 
-    function killPlayer(id) {
-      const p = players.find(x => x.id === id);
+    function killPlayerManual(id) {
+      let p = players.find(x => x.id === id);
       if (p) {
         p.alive = false;
-        log(`💀 Игрок #${p.id} (${p.role}) покинул игру.`);
-        renderGame();
+        logMessage(`💀 Ведущий принудительно вывел из игры игрока #${p.id} ${p.nickname} (${p.role}).`);
+        renderDayPlayers();
+        checkWinConditions();
       }
     }
 
-    function nextPhase() {
-      if (currentPhase === 'NIGHT') {
-        // Подсчет результатов ночи
-        const shotId = document.getElementById('night-shot').value;
-        const priestId = document.getElementById('night-priest').value;
+    function openVotingScreen() {
+      document.getElementById('day-screen').classList.remove('active');
+      document.getElementById('voting-screen').classList.add('active');
 
-        if (shotId) {
-          if (shotId === priestId) {
-            log(`🛡️ В Игрока #${shotId} стреляли, но Ночная жрица его спасла!`);
-          } else {
-            const victim = players.find(p => p.id == shotId);
-            if (victim) {
-              victim.alive = false;
-              log(`💀 Ночью был убит Игрок #${victim.id} (${victim.role})`);
-            }
-          }
-        } else {
-          log(`🕊️ Ночью никто не погиб.`);
+      let alivePlayers = players.filter(p => p.alive);
+      let container = document.getElementById('voting-inputs-container');
+      
+      container.innerHTML = alivePlayers.map(p => `
+        <div style="margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
+          <span>#${p.id} ${p.nickname}</span>
+          <input type="number" min="0" value="0" id="vote-count-${p.id}" style="width: 80px;">
+        </div>
+      `).join('');
+    }
+
+    function finalizeVoting() {
+      let maxVotes = -1;
+      let candidateId = null;
+      let tie = false;
+
+      players.filter(p => p.alive).forEach(p => {
+        let input = document.getElementById(`vote-count-${p.id}`);
+        let votes = input ? parseInt(input.value) || 0 : 0;
+        if (votes > maxVotes) {
+          maxVotes = votes;
+          candidateId = p.id;
+          tie = false;
+        } else if (votes === maxVotes && votes > 0) {
+          tie = true;
         }
+      });
 
-        currentPhase = 'DAY';
+      if (tie || maxVotes <= 0) {
+        alert("Голосование завершено: никто не набрал больше всего голосов или зафиксирована ничья (автокатастрофа). Никто не выгнан.");
+        logMessage(`🗳️ Голоса разделись равным образом или никто не выставлен. Город продолжает игру.`);
       } else {
-        currentPhase = 'NIGHT';
-        dayCount++;
-        log(`🌙 Наступает Ночь ${dayCount}`);
+        let expelled = players.find(p => p.id == candidateId);
+        if (expelled) {
+          expelled.alive = false;
+          alert(`По итогам голосования город покидает #${expelled.id} ${expelled.nickname} (${expelled.role})!`);
+          logMessage(`🗳️ По итогам дневного голосования из игры выгнан #${expelled.id} ${expelled.nickname} (${expelled.role}).`);
+        }
       }
-      renderGame();
+
+      document.getElementById('voting-screen').classList.remove('active');
+      document.getElementById('day-screen').classList.add('active');
+      renderDayPlayers();
+      checkWinConditions();
     }
 
-    function log(msg) {
-      const box = document.getElementById('game-log');
-      box.innerHTML += `<div>${msg}</div>`;
-      box.scrollTop = box.scrollHeight;
-    }
+    function checkWinConditions() {
+      let aliveList = players.filter(p => p.alive);
+      let mafiaTeamAlive = aliveList.filter(p => ["Мафия", "Дон Мафии", "Капо"].includes(p.role));
+      let townTeamAlive = aliveList.filter(p => ["Мирный житель", "Шериф", "Сыщик", "Ночная жрица"].includes(p.role));
+      let killerAlive = aliveList.filter(p => p.role === "Киллер");
 
-    generateSetup();
+      if (mafiaTeamAlive.length === 0 && killerAlive.length === 0) {
+        alert("🎉 Победа Мирного города! Все мафии и киллер уничтожены.");
+        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Мирного города!");
+        return;
+      }
+      if (mafiaTeamAlive.length >= townTeamAlive.length + killerAlive.length && mafiaTeamAlive.length > 0) {
+        alert("😈 Победа Мафии! Клан мафии захватил город.");
+        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Мафии!");
+        return;
+      }
+      // Условие победы киллера (если осталось 2 мирных и киллер)
+      if (killerAlive.length > 0 && mafiaTeamAlive.length === 0 && townTeamAlive.length <= 2) {
+        alert("🗡️ Победа Киллера! Ему удалось устранить всех конкурентов.");
+        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Киллера!");
+        return;
+      }
+    }
   </script>
 </body>
 </html>
