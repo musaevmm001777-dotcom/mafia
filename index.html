@@ -1,634 +1,924 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Мафия: Панель Ведущего</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17191f">
+  <meta name="description" content="Удобная панель ведущего игры Мафия">
+  <title>Мафия — пульт ведущего</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg-color: #121212;
-      --card-bg: #1e1e1e;
-      --accent: #d32f2f;
-      --accent-hover: #b71c1c;
-      --text: #ffffff;
-      --subtext: #b0b0b0;
-      --border: #333333;
-      --success: #2e7d32;
-      --warning: #f57c00;
+      color-scheme: dark;
+      --bg: #17191f;
+      --panel: #20232b;
+      --panel-2: #292d37;
+      --line: #383d49;
+      --text: #f5f1e9;
+      --muted: #9ba1ae;
+      --gold: #d7b779;
+      --gold-2: #f0d7a5;
+      --red: #e17d79;
+      --green: #8dc5a0;
+      --blue: #91b5e7;
+      --radius: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text);
       margin: 0;
-      padding: 12px;
-      box-sizing: border-box;
-      user-select: none;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 75% -20%, #51432d55 0, transparent 42%),
+        var(--bg);
     }
-    h2, h3, h4 { text-align: center; margin: 6px 0; color: #ff5252; }
-    .screen { display: none; }
-    .screen.active { display: block; }
-    .btn {
-      background-color: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 16px;
-      margin-top: 12px;
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    .app { width: min(1120px, 100%); margin: auto; padding: 20px 22px 48px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #806a43; border-radius: 14px; color: var(--gold-2); background: #322c22; font-size: 21px; }
+    .brand h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 600; letter-spacing: .02em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .top-actions { display: flex; gap: 8px; }
+    .icon-btn, .btn, .small-btn {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: .18s ease;
     }
-    .btn:active { background-color: var(--accent-hover); }
-    .btn-secondary { background-color: #424242; }
-    .btn-secondary:active { background-color: #616161; }
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 10px;
+    .icon-btn { width: 42px; height: 42px; color: var(--muted); font-size: 17px; }
+    .icon-btn:hover, .small-btn:hover { border-color: var(--gold); color: var(--gold-2); }
+    .btn { min-height: 46px; padding: 0 17px; font-weight: 650; }
+    .btn:hover { transform: translateY(-1px); border-color: #aa8e59; }
+    .btn.primary { color: #241f17; border-color: var(--gold); background: var(--gold); }
+    .btn.primary:hover { background: var(--gold-2); }
+    .btn.ghost { background: transparent; }
+    .btn.danger { color: #ffc5c0; border-color: #673b3c; background: #382526; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .small-btn { padding: 7px 10px; color: var(--muted); font-size: 12px; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .setup-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); gap: 18px; align-items: start; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, #242731, #1e2027); box-shadow: 0 12px 34px #00000012; }
+    .card-pad { padding: 22px; }
+    .eyebrow { color: var(--gold); font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+    h2, h3, p { margin-top: 0; }
+    h2 { margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(23px, 4vw, 32px); font-weight: 500; }
+    .subtle { color: var(--muted); line-height: 1.55; }
+    .count-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 14px; }
+    .count-control { display: flex; align-items: center; gap: 13px; padding: 5px; border: 1px solid var(--line); border-radius: 14px; background: #191b21; }
+    .count-control button { width: 36px; height: 36px; border: 0; border-radius: 10px; color: var(--gold-2); background: var(--panel-2); font-size: 20px; cursor: pointer; }
+    .count-number { min-width: 28px; text-align: center; font-size: 18px; font-weight: 700; }
+    .player-list { display: grid; gap: 8px; max-height: 52vh; overflow: auto; padding-right: 3px; }
+    .player-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(138px, .76fr); gap: 9px; align-items: center; }
+    .player-number { color: var(--muted); text-align: center; font-size: 12px; }
+    .field, .role-select {
+      width: 100%; min-width: 0; height: 43px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: 11px; outline: none;
+      color: var(--text); background: #191b22;
     }
-    .player-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #252525;
-      padding: 8px 10px;
-      border-radius: 6px;
-      margin-bottom: 6px;
+    .field:focus, .role-select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #d7b77920; }
+    .role-select { color: #ded8cd; font-size: 13px; }
+    .role-hint { display: flex; gap: 9px; margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .role-hint span { color: var(--gold); }
+    .rules-list { display: grid; gap: 11px; margin: 19px 0 0; padding: 0; list-style: none; }
+    .rules-list li { display: flex; gap: 10px; color: #d0d0d4; font-size: 13px; line-height: 1.45; }
+    .rules-list b { flex: 0 0 23px; color: var(--gold); font-size: 14px; }
+    .setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+    .privacy-note { color: var(--muted); font-size: 11px; }
+    .game-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; align-items: start; }
+    .main-column { min-width: 0; }
+    .phase-card { position: relative; overflow: hidden; padding: 25px; }
+    .phase-card::after { position: absolute; top: -78px; right: -52px; width: 190px; height: 190px; border: 1px solid #d7b77922; border-radius: 50%; content: ""; box-shadow: 0 0 0 26px #d7b77908, 0 0 0 54px #d7b77906; pointer-events: none; }
+    .phase-top { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 16px; }
+    .phase-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #796641; border-radius: 99px; color: var(--gold-2); background: #342e23; font-size: 11px; font-weight: 700; }
+    .phase-card h2 { position: relative; z-index: 1; margin: 16px 0 7px; }
+    .phase-lead { position: relative; z-index: 1; max-width: 650px; margin: 0; color: #b9bbc2; line-height: 1.55; }
+    .phase-content { margin-top: 20px; }
+    .stepper { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 22px 0 0; }
+    .step { height: 4px; border-radius: 4px; background: #3c4049; }
+    .step.done, .step.current { background: var(--gold); }
+    .action-panel { margin-top: 17px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: #191b22; }
+    .action-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; margin-bottom: 13px; }
+    .action-title h3 { margin: 0 0 4px; font-size: 16px; }
+    .action-title p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .action-grid.one { grid-template-columns: 1fr; }
+    .form-label { display: block; margin: 0 0 6px; color: #bcbec5; font-size: 11px; font-weight: 650; }
+    .action-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 15px; }
+    .feedback { min-height: 18px; color: var(--muted); font-size: 12px; }
+    .feedback.good { color: var(--green); }
+    .feedback.bad { color: #f0a09a; }
+    .phase-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+    .notice { display: flex; gap: 11px; align-items: start; margin-top: 15px; padding: 13px 14px; border: 1px solid #6a583b; border-radius: 13px; color: #e4d1a9; background: #302a20; font-size: 13px; line-height: 1.5; }
+    .notice.success { border-color: #3b604b; color: #b5ddc1; background: #1e3027; }
+    .notice.alert { border-color: #663e3e; color: #f1b6ae; background: #342323; }
+    .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .side-stack { display: grid; gap: 14px; }
+    .side-card { padding: 17px; }
+    .side-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 11px; }
+    .side-heading h3 { margin: 0; font-size: 14px; }
+    .counter { color: var(--muted); font-size: 11px; }
+    .roster { display: grid; gap: 6px; max-height: 350px; overflow: auto; }
+    .roster-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid transparent; border-radius: 10px; background: #1a1c23; }
+    .roster-row.dead { opacity: .45; }
+    .roster-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .roster-meta { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .dead .dot { background: var(--red); }
+    .log { display: grid; gap: 9px; max-height: 220px; overflow: auto; }
+    .log-item { display: grid; grid-template-columns: 10px 1fr; gap: 8px; color: #c2c3c9; font-size: 11px; line-height: 1.45; }
+    .log-item::before { width: 6px; height: 6px; margin-top: 4px; border-radius: 50%; background: var(--gold); content: ""; }
+    .log-time { display: block; margin-top: 2px; color: #777e8b; font-size: 10px; }
+    .empty { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .status-pill { display: inline-flex; padding: 5px 8px; border-radius: 99px; color: var(--muted); background: #292c34; font-size: 10px; }
+    .timer { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; letter-spacing: .06em; }
+    .timer-controls { display: flex; gap: 7px; margin-top: 9px; }
+    .modal-backdrop { position: fixed; z-index: 20; inset: 0; display: none; align-items: center; justify-content: center; padding: 18px; background: #08090dc9; }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(500px, 100%); max-height: 85vh; overflow: auto; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #22252d; box-shadow: 0 20px 80px #0008; }
+    .modal h2 { margin-bottom: 7px; font-size: 24px; }
+    .modal p { color: var(--muted); line-height: 1.55; }
+    .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .role-guide { display: grid; gap: 8px; margin-top: 16px; }
+    .role-guide-row { padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: #1a1c23; }
+    .role-guide-row strong { color: var(--gold-2); font-size: 13px; }
+    .role-guide-row p { margin: 4px 0 0; font-size: 12px; }
+    .toast { position: fixed; z-index: 30; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); max-width: calc(100% - 36px); padding: 12px 15px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: #30343e; box-shadow: 0 8px 30px #0005; opacity: 0; transform: translateY(12px); transition: .2s; pointer-events: none; font-size: 13px; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    @media (max-width: 780px) {
+      .app { padding: 14px 14px calc(34px + env(safe-area-inset-bottom)); }
+      .setup-layout, .game-grid { grid-template-columns: 1fr; }
+      .side-stack { grid-template-columns: 1fr 1fr; }
+      .roster { max-height: 280px; }
     }
-    .player-row.dead { opacity: 0.4; text-decoration: line-through; }
-    select, input {
-      background: #2c2c2c;
-      color: #fff;
-      border: 1px solid var(--border);
-      padding: 8px;
-      border-radius: 6px;
-      font-size: 14px;
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: 4px;
-    }
-    .badge {
-      font-size: 11px;
-      padding: 3px 6px;
-      border-radius: 4px;
-      background: #333;
-      color: #ddd;
-      font-weight: 500;
-    }
-    .badge-mafia { background: #5c0000; color: #ff8a80; }
-    .badge-town { background: #003366; color: #80d8ff; }
-    .badge-solo { background: #4a148c; color: #ea80fc; }
-    .log-box {
-      background: #080808;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      height: 140px;
-      overflow-y: auto;
-      font-size: 12px;
-      font-family: monospace;
-      margin-top: 10px;
-      color: #ccc;
-      line-height: 1.4;
-    }
-    .action-group {
-      background: #222;
-      border-left: 4px solid var(--accent);
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 0 8px 8px 0;
-    }
-    .hint-box {
-      background: #1b3320;
-      border: 1px solid #2e7d32;
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 6px;
-      font-size: 13px;
-      color: #a5d6a7;
-    }
-    .flex-row { display: flex; gap: 8px; }
-    .small-btn {
-      padding: 4px 8px;
-      font-size: 12px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
+    @media (max-width: 520px) {
+      .topbar { margin-bottom: 16px; }
+      .brand h1 { font-size: 18px; }
+      .brand p { font-size: 10px; }
+      .brand-mark { width: 38px; height: 38px; }
+      .icon-btn { width: 38px; height: 38px; }
+      .setup-card.card-pad, .phase-card { padding: 18px; }
+      .player-row { grid-template-columns: 25px minmax(0, 1fr) 120px; gap: 6px; }
+      .field, .role-select { height: 41px; padding: 0 9px; font-size: 12px; }
+      .side-stack { grid-template-columns: 1fr; }
+      .action-grid, .two-column { grid-template-columns: 1fr; }
+      .phase-actions .btn { flex: 1 1 100%; }
+      .setup-footer { align-items: stretch; flex-direction: column; }
+      .setup-footer .btn { width: 100%; }
+      .privacy-note { text-align: center; }
+      .phase-top { flex-direction: column; }
     }
   </style>
 </head>
 <body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">♠</div>
+        <div><h1>Пульт ведущего</h1><p>МАФИЯ · помощник игры</p></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="guideButton" aria-label="Правила ролей" title="Правила ролей">?</button>
+        <button class="icon-btn" id="saveButton" aria-label="Сохранить игру" title="Сохранить игру">↧</button>
+      </div>
+    </header>
 
-  <!-- ЭКРАН 1: НАСТРОЙКА ИГРЫ И НИКОВ -->
-  <div id="setup-screen" class="screen active">
-    <h2>🎭 Настройка игры Мафия</h2>
-    <div class="card">
-      <label>Количество игроков (1 - 16):</label>
-      <input type="number" id="player-count" min="1" max="16" value="10" onchange="generatePlayerInputs()">
-    </div>
-    
-    <div id="players-config-container"></div>
-    <button class="btn" onclick="initGame()">Сохранить и начать игру</button>
-  </div>
-
-  <!-- ЭКРАН 2: ПЕРВАЯ НОЧЬ (ЗНАКОМСТВО) -->
-  <div id="first-night-screen" class="screen">
-    <h2>🌙 Ночь 1: Знакомство</h2>
-    <div class="card" id="first-night-content"></div>
-    <button class="btn" onclick="finishFirstNight()">Закончить ночь знакомства $\rightarrow$ Утро 1</button>
-  </div>
-
-  <!-- ЭКРАН 3: УТРО 1 (ЗНАКОМСТВО И ОБСУЖДЕНИЕ) -->
-  <div id="morning-screen" class="screen">
-    <h2>☀️ Утро 1: Знакомство игроков</h2>
-    <div class="card">
-      <p style="text-align: center; color: var(--subtext);">Проведите круг знакомства игроков. Никто не убит в первую ночь.</p>
-    </div>
-    <h3>📋 Игроки за столом</h3>
-    <div id="morning-players-list"></div>
-    <button class="btn" onclick="startRegularNight(2)">Перейти к Ночи 2</button>
-  </div>
-
-  <!-- ЭКРАН 4: РЕГУЛЯРНАЯ НОЧЬ -->
-  <div id="night-screen" class="screen">
-    <h2 id="night-title">🌙 Ночь X</h2>
-    <div class="card" id="night-actions-container"></div>
-    <button class="btn" onclick="processNightResults()">Обработать итоги ночи</button>
-  </div>
-
-  <!-- ЭКРАН 5: ИТОГИ НОЧИ И ДЕНЬ -->
-  <div id="day-screen" class="screen">
-    <h2 id="day-title">☀️ День X</h2>
-    <div class="card" id="night-results-announcement"></div>
-    
-    <h3>📋 Статус игроков</h3>
-    <div id="day-players-list"></div>
-
-    <button class="btn" onclick="openVotingScreen()">Перейти к голосованию</button>
-  </div>
-
-  <!-- ЭКРАН 6: ГОЛОСОВАНИЕ -->
-  <div id="voting-screen" class="screen">
-    <h2>🗳️ Дневное голосование</h2>
-    <div class="card">
-      <p style="font-size:13px; color:var(--subtext);">Отметьте голоса против выставленных игроков:</p>
-      <div id="voting-inputs-container"></div>
-    </div>
-    <button class="btn" onclick="finalizeVoting()">Завершить голосование и выгнать</button>
-  </div>
-
-  <!-- ЛОГ ИСТОРИИ (ВСЕГДА ВИДИМЫЙ В ОСНОВНЫХ ФАЗАХ) -->
-  <div id="persistent-log-container" style="display:none; margin-top:15px;">
-    <h4 style="text-align: left; margin-bottom: 4px;">📜 Лог событий игры</h4>
-    <div id="game-log" class="log-box"></div>
-  </div>
-
-  <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
-
-    const ROLES = [
-      "Мирный житель", 
-      "Шериф", 
-      "Сыщик", 
-      "Ночная жрица", 
-      "Мафия", 
-      "Дон Мафии", 
-      "Капо", 
-      "Киллер"
-    ];
-
-    let players = [];
-    let currentDay = 1;
-    let firstNightStep = 0;
-    let gameLogHistory = [];
-    
-    // Переменные ночных выборов
-    let nightData = {
-      mafiaShot: "",
-      donCheck: "",
-      sheriffCheck: "",
-      killerShot: "",
-      detectiveTarget1: "",
-      detectiveTarget2: "",
-      priestTarget: ""
-    };
-
-    let lastPriestTarget = null;
-    let priestSelfSavedUsed = false;
-
-    // Инициализация полей ввода игроков при старте
-    function generatePlayerInputs() {
-      const count = parseInt(document.getElementById('player-count').value);
-      const container = document.getElementById('players-config-container');
-      container.innerHTML = '';
-      
-      for (let i = 1; i <= count; i++) {
-        container.innerHTML += `
-          <div class="card" style="margin-bottom:8px; padding:8px;">
-            <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">Игрок #${i}</div>
-            <div class="flex-row">
-              <input type="text" id="nick-${i}" value="Игрок ${i}" placeholder="Никнейм">
-              <select id="role-${i}">
-                ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
-              </select>
+    <main>
+      <section class="view active" id="setupView">
+        <div class="setup-layout">
+          <div class="card card-pad setup-card">
+            <div class="eyebrow">Новая партия</div>
+            <h2>Соберите свой город</h2>
+            <p class="subtle">Введите игровые ники и назначьте роли. Роли видны только ведущему на этом устройстве.</p>
+            <div class="count-row">
+              <strong>Игроки за столом</strong>
+              <div class="count-control" aria-label="Количество игроков">
+                <button id="countMinus" aria-label="Уменьшить количество">−</button>
+                <span class="count-number" id="countValue">6</span>
+                <button id="countPlus" aria-label="Увеличить количество">+</button>
+              </div>
+            </div>
+            <div class="player-list" id="setupPlayers"></div>
+            <p class="role-hint"><span>✦</span> Можно назначить несколько мирных жителей и мафиози. Уникальные роли — по одной на игру.</p>
+            <div class="setup-footer">
+              <span class="privacy-note">Игра автоматически сохраняется в этом браузере</span>
+              <button class="btn primary" id="startButton">Начать игру <span aria-hidden="true">→</span></button>
             </div>
           </div>
-        `;
-      }
-    }
-    generatePlayerInputs();
-
-    function initGame() {
-      const count = parseInt(document.getElementById('player-count').value);
-      players = [];
-      for (let i = 1; i <= count; i++) {
-        players.push({
-          id: i,
-          nickname: document.getElementById(`nick-${i}`).value.trim() || `Игрок ${i}`,
-          role: document.getElementById(`role-${i}`).value,
-          alive: true,
-          fouls: 0
-        });
-      }
-
-      document.getElementById('setup-screen').classList.remove('active');
-      document.getElementById('first-night-screen').classList.add('active');
-      document.getElementById('persistent-log-container').style.display = 'block';
-      
-      logMessage("🎮 Игра инициализирована. Начинается ночь знакомства.");
-      renderFirstNightStep();
-    }
-
-    function logMessage(text) {
-      gameLogHistory.push(text);
-      const box = document.getElementById('game-log');
-      if (box) {
-        box.innerHTML = gameLogHistory.map(l => `<div>${l}</div>`).join('');
-        box.scrollTop = box.scrollHeight;
-      }
-    }
-
-    // Логика первой ночи знакомства по шагам
-    const firstNightStepsDesc = [
-      { title: "1. Дон мафии и Мафия", desc: "Ведущий будит Дон мафии и Мафию. Они знакомятся друг с другом." },
-      { title: "2. Шериф", desc: "Ведущий будит Шерифа, тот знакомится с ведущим." },
-      { title: "3. Киллер", desc: "Ведущий будит Киллера, тот знакомится с ведущим." },
-      { title: "4. Ночная жрица", desc: "Ведущий будит Жрицу, она знакомится с ведущим." },
-      { title: "5. Сыщик", desc: "Ведущий будит Сыщика, он знакомится с ведущим." }
-    ];
-
-    function renderFirstNightStep() {
-      const container = document.getElementById('first-night-content');
-      if (firstNightStep < firstNightStepsDesc.length) {
-        let stepInfo = firstNightStepsDesc[firstNightStep];
-        container.innerHTML = `
-          <h3>${stepInfo.title}</h3>
-          <p>${stepInfo.desc}</p>
-          <button class="btn" onclick="nextFirstNightStep()">Далее $\rightarrow$</button>
-        `;
-      }
-    }
-
-    function nextFirstNightStep() {
-      firstNightStep++;
-      if (firstNightStep < firstNightStepsDesc.length) {
-        renderFirstNightStep();
-      } else {
-        document.getElementById('first-night-screen').classList.remove('active');
-        document.getElementById('morning-screen').classList.add('active');
-        renderMorning1();
-        logMessage("☀️ Наступило Утро 1. Круг знакомства.");
-      }
-    }
-
-    function renderMorning1() {
-      const list = document.getElementById('morning-players-list');
-      list.innerHTML = players.map(p => `
-        <div class="player-row">
-          <div><strong>#${p.id} ${p.nickname}</strong></div>
-          <div><span class="badge ${getRoleBadgeClass(p.role)}">${p.role}</span></div>
+          <aside class="card card-pad">
+            <div class="eyebrow">Коротко о правилах</div>
+            <h3 style="margin:8px 0 0;font-family:Georgia,serif;font-size:22px;font-weight:500">Ваши роли — ваши правила</h3>
+            <ul class="rules-list">
+              <li><b>☾</b><span>Первая ночь — знакомство: ведущий будит роли по очереди, затем город знакомится утром.</span></li>
+              <li><b>✦</b><span>С каждой следующей ночи записывайте цели. Приложение покажет результаты проверок и спасения.</span></li>
+              <li><b>◎</b><span>Жрица может спасти от ночного убийства один раз за игру и не выбирает одну цель две ночи подряд.</span></li>
+              <li><b>♙</b><span>Капо защищает игрока от дневного голосования. Повторять цель подряд и выбирать себя нельзя.</span></li>
+              <li><b>▤</b><span>Действия и выбывшие сохраняются в журнале. Продолжить партию можно после перезагрузки страницы.</span></li>
+            </ul>
+          </aside>
         </div>
-      `).join('');
-    }
+      </section>
 
-    function getRoleBadgeClass(role) {
-      if (["Мафия", "Дон Мафии", "Капо"].includes(role)) return "badge-mafia";
-      if (["Киллер"].includes(role)) return "badge-solo";
-      return "badge-town";
-    }
-
-    function startRegularNight(dayNum) {
-      currentDay = dayNum;
-      document.getElementById('morning-screen').classList.remove('active');
-      document.getElementById('day-screen').classList.remove('active');
-      document.getElementById('night-screen').classList.add('active');
-      
-      document.getElementById('night-title').innerText = `🌙 Ночь ${currentDay}`;
-      renderRegularNightActions();
-      logMessage(`🌙 Наступила Ночь ${currentDay}`);
-    }
-
-    function renderRegularNightActions() {
-      const container = document.getElementById('night-actions-container');
-      const aliveOpts = `<option value="">-- Никого / Пропуск --</option>` + 
-        players.filter(p => p.alive).map(p => `<option value="${p.id}">#${p.id} ${p.nickname} (${p.role})</option>`).join('');
-
-      container.innerHTML = `
-        <div class="action-group">
-          <strong>1. Дон мафии и Мафия (Выстрел):</strong>
-          <select id="n-shot">${aliveOpts}</select>
-        </div>
-
-        <div class="action-group">
-          <strong>2. Дон мафии (Поиск Шерифа):</strong>
-          <select id="n-don-check">${aliveOpts}</select>
-        </div>
-
-        <div class="action-group">
-          <strong>3. Шериф (Поиск Мафии):</strong>
-          <select id="n-sheriff-check">${aliveOpts}</select>
-          <div id="sheriff-hint" style="margin-top:6px;"></div>
-        </div>
-
-        <div class="action-group">
-          <strong>4. Киллер (Выбор жертвы):</strong>
-          <select id="n-killer">${aliveOpts}</select>
-        </div>
-
-        <div class="action-group">
-          <strong>5. Сыщик (Сравнение 2 игроков):</strong>
-          <div style="display:flex; gap:6px; margin-top:4px;">
-            <select id="n-det-1">${aliveOpts}</select>
-            <select id="n-det-2">${aliveOpts}</select>
+      <section class="view" id="gameView">
+        <div class="game-grid">
+          <div class="main-column">
+            <section class="card phase-card">
+              <div class="phase-top">
+                <div>
+                  <span class="phase-badge" id="phaseBadge">☾ Первая ночь</span>
+                  <h2 id="phaseTitle">Город засыпает</h2>
+                  <p class="phase-lead" id="phaseLead"></p>
+                </div>
+                <div class="status-pill" id="roundPill">Подготовка</div>
+              </div>
+              <div id="phaseContent" class="phase-content"></div>
+            </section>
+            <section class="card card-pad" style="margin-top:14px">
+              <div class="side-heading"><h3>Заметка ведущего</h3><span class="counter">только для вас</span></div>
+              <label class="sr-only" for="hostNote">Заметка ведущего</label>
+              <textarea class="field" id="hostNote" rows="2" placeholder="Например: игрок 4 просил повторить правила..." style="height:auto;padding:11px;resize:vertical"></textarea>
+            </section>
           </div>
-          <div id="detective-hint" style="margin-top:6px;"></div>
+          <aside class="side-stack">
+            <section class="card side-card">
+              <div class="side-heading"><h3>Игроки</h3><span class="counter" id="aliveCount"></span></div>
+              <div class="roster" id="roster"></div>
+            </section>
+            <section class="card side-card">
+              <div class="side-heading"><h3>Таймер обсуждения</h3><span class="counter">минуты</span></div>
+              <div class="timer" id="timerDisplay">03:00</div>
+              <div class="timer-controls">
+                <button class="small-btn" id="timerToggle">▶ Старт</button>
+                <button class="small-btn" id="timerReset">↺ Сброс</button>
+                <select class="small-btn" id="timerLength" aria-label="Длительность таймера">
+                  <option value="60">1 мин</option><option value="180" selected>3 мин</option><option value="300">5 мин</option><option value="600">10 мин</option>
+                </select>
+              </div>
+            </section>
+            <section class="card side-card">
+              <div class="side-heading"><h3>Журнал игры</h3><button class="small-btn" id="exportButton">Экспорт</button></div>
+              <div class="log" id="eventLog"></div>
+            </section>
+          </aside>
         </div>
+      </section>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle"></h2>
+      <div id="modalBody"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-        <div class="action-group">
-          <strong>6. Ночная жрица (Лечение):</strong>
-          <select id="n-priest">${aliveOpts}</select>
-          <div id="priest-warning" style="margin-top:6px; font-size:12px; color:#ffcc80;"></div>
-        </div>
-      `;
+  <script>
+    (() => {
+      "use strict";
+      const STORAGE_KEY = "mafia-host-game-v1";
+      const ROLE = {
+        none: { name: "Не назначена", team: "unknown" },
+        civilian: { name: "Мирный житель", team: "city" },
+        mafia: { name: "Мафия", team: "mafia" },
+        don: { name: "Дон мафии", team: "mafia" },
+        sheriff: { name: "Шериф", team: "city" },
+        killer: { name: "Киллер", team: "killer" },
+        priestess: { name: "Ночная жрица", team: "city" },
+        detective: { name: "Сыщик", team: "city" },
+        capo: { name: "Капо", team: "mafia" }
+      };
+      const ROLE_ORDER = ["none", "civilian", "mafia", "don", "sheriff", "killer", "priestess", "detective", "capo"];
+      const UNIQUE_ROLES = ["don", "sheriff", "killer", "priestess", "detective", "capo"];
+      const OPENING_STEPS = [
+        ["Мафия и Дон", "Мафия знакомится и узнаёт Дона."],
+        ["Шериф", "Шериф показывает ведущему свою карту."],
+        ["Киллер", "Киллер показывает ведущему свою карту."],
+        ["Ночная жрица", "Жрица показывает ведущему свою карту."],
+        ["Сыщик", "Сыщик показывает ведущему свою карту."]
+      ];
+      const NIGHT_STEPS = [
+        { key: "mafia", title: "Мафия и Дон", help: "Команда выбирает одного игрока для ночного убийства." },
+        { key: "don", title: "Дон ищет Шерифа", help: "Выберите игрока — приложение покажет, является ли он Шерифом." },
+        { key: "sheriff", title: "Шериф проверяет", help: "Если цель принадлежит мафии, Шериф устраняет её этой ночью." },
+        { key: "killer", title: "Киллер выбирает цель", help: "Киллер действует самостоятельно и выбирает, кого убить." },
+        { key: "detective", title: "Сыщик сравнивает", help: "Выберите двух игроков — ведущий увидит, одна ли у них команда." },
+        { key: "priestess", title: "Жрица лечит", help: "Выберите игрока для защиты от любого ночного убийства." },
+        { key: "capo", title: "Капо выбирает защиту", help: "Выберите игрока, который получит иммунитет от дневного голосования." }
+      ];
+      const ROLE_TEXT = {
+        civilian: "Играет за мирный город. Цель — вычислить и изгнать мафию и Киллера.",
+        mafia: "Играет за мафию. Вместе с Доном выбирает цель ночного убийства.",
+        don: "Играет за мафию. Ночью ищет Шерифа; решающий голос мафии остаётся за Доном.",
+        sheriff: "Играет за мирный город. Проверяет игрока; найденный мафиози выбывает этой ночью.",
+        killer: "Играет сам за себя. Выбирает ночную цель; победа возможна, если после дневного голосования за столом остаются Киллер и два мирных жителя.",
+        priestess: "Играет за мирный город. Один раз за игру спасает выбранного игрока от ночного убийства. Нельзя выбирать одну цель две ночи подряд.",
+        detective: "Играет за мирный город. Сравнивает двух игроков: приложение сообщает, играют ли они за одну команду.",
+        capo: "Играет за мафию. Каждую ночь выбирает иммунитет от голосования на следующий день; нельзя защищать себя или одну цель две ночи подряд."
+      };
+      let state = null;
+      let timerSeconds = 180;
+      let timerHandle = null;
+      let toastHandle = null;
 
-      // Добавим обработчики для интерактивных подсказок Ведущему в реальном времени
-      document.getElementById('n-sheriff-check').addEventListener('change', (e) => {
-        let targetId = e.target.value;
-        let hintDiv = document.getElementById('sheriff-hint');
-        if (!targetId) { hintDiv.innerHTML = ""; return; }
-        let targetPlayer = players.find(p => p.id == targetId);
-        // Если мафия/дон/капо -> ведущий показывает 👎 (черная проверка), если мирный/киллер -> 👍
-        if (["Мафия", "Дон Мафии", "Капо"].includes(targetPlayer.role)) {
-          hintDiv.innerHTML = `<div class="hint-box" style="background:#421111; border-color:#d32f2f; color:#ff8a80;">👉 Подсказка ведущему: покажите жест <b>👎</b> (Шериф обнаружил мафию)</div>`;
-        } else {
-          hintDiv.innerHTML = `<div class="hint-box">👉 Подсказка ведущему: покажите жест <b>👍</b> (Шериф обнаружил мирного игрока или киллера)</div>`;
+      const $ = (selector) => document.querySelector(selector);
+      const setupPlayersEl = $("#setupPlayers");
+      const phaseContent = $("#phaseContent");
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[char]));
+      }
+      function roleOptions(selected = "none") {
+        return ROLE_ORDER.map((key) =>
+          `<option value="${key}" ${selected === key ? "selected" : ""}>${ROLE[key].name}</option>`
+        ).join("");
+      }
+      function playerRows(count, previous = []) {
+        setupPlayersEl.innerHTML = "";
+        for (let i = 0; i < count; i += 1) {
+          const player = previous[i] || {};
+          const row = document.createElement("div");
+          row.className = "player-row";
+          row.innerHTML = `<span class="player-number">${String(i + 1).padStart(2, "0")}</span>
+            <input class="field player-name" maxlength="28" autocomplete="off" placeholder="Ник игрока ${i + 1}" value="${escapeHtml(player.name || "")}" aria-label="Ник игрока ${i + 1}">
+            <select class="role-select player-role" aria-label="Роль игрока ${i + 1}">${roleOptions(player.role || "none")}</select>`;
+          setupPlayersEl.append(row);
         }
-      });
-
-      document.getElementById('n-det-1').addEventListener('change', updateDetectiveHint);
-      document.getElementById('n-det-2').addEventListener('change', updateDetectiveHint);
-      document.getElementById('n-priest').addEventListener('change', updatePriestWarning);
-    }
-
-    function updateDetectiveHint() {
-      let id1 = document.getElementById('n-det-1').value;
-      let id2 = document.getElementById('n-det-2').value;
-      let hintDiv = document.getElementById('detective-hint');
-      if (!id1 || !id2) { hintDiv.innerHTML = ""; return; }
-      
-      let p1 = players.find(p => p.id == id1);
-      let p2 = players.find(p => p.id == id2);
-      
-      let mafiaTeam = ["Мафия", "Дон Мафии", "Капо"];
-      let is1Mafia = mafiaTeam.includes(p1.role);
-      let is2Mafia = mafiaTeam.includes(p2.role);
-
-      // Если оба в мафии или оба мирные/городские (включая сыщика, жрицу, шерифа, мирных) — одинаковые команды (👍👍).
-      // Киллер играет сам за себя, поэтому с кем угодно другим — разные команды (👍👎).
-      let team1 = is1Mafia ? 'mafia' : (p1.role === 'Киллер' ? 'killer' : 'town');
-      let team2 = is2Mafia ? 'mafia' : (p2.role === 'Киллер' ? 'killer' : 'town');
-
-      if (team1 === team2 && team1 !== 'killer') {
-        hintDiv.innerHTML = `<div class="hint-box">👉 Подсказка Сыщику: покажите <b>👍 👍</b> (Оба в одной команде)</div>`;
-      } else {
-        hintDiv.innerHTML = `<div class="hint-box" style="background:#3d2c1e; border-color:#f57c00; color:#ffe0b2;">👉 Подсказка Сыщику: покажите <b>👍 👎</b> (Игроки из разных команд)</div>`;
       }
-    }
-
-    function updatePriestWarning() {
-      let priestId = document.getElementById('n-priest').value;
-      let warnDiv = document.getElementById('priest-warning');
-      if (!priestId) { warnDiv.innerHTML = ""; return; }
-
-      let msg = [];
-      if (lastPriestTarget && priestId == lastPriestTarget) {
-        msg.push("⚠️ Внимание: Жрица лечит этого же игрока второй раз подряд! Правило запрещает.");
+      function readSetupPlayers() {
+        return [...setupPlayersEl.querySelectorAll(".player-row")].map((row, index) => ({
+          id: `p${index + 1}`,
+          name: row.querySelector(".player-name").value.trim() || `Игрок ${index + 1}`,
+          role: row.querySelector(".player-role").value,
+          alive: true
+        }));
       }
-      warnDiv.innerHTML = msg.join('<br>');
-    }
-
-    function processNightResults() {
-      let mafiaShotId = document.getElementById('n-shot').value;
-      let donCheckId = document.getElementById('n-don-check').value;
-      let sheriffCheckId = document.getElementById('n-sheriff-check').value;
-      let killerShotId = document.getElementById('n-killer').value;
-      let priestId = document.getElementById('n-priest').value;
-
-      // Проверка правил Жрицы
-      if (priestId) {
-        if (lastPriestTarget && priestId == lastPriestTarget) {
-          alert("Ошибка правил Жрицы: нельзя выбирать одного и того же игрока два раза подряд!");
+      function save() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          console.error("Не удалось сохранить игру:", error);
+          showToast("Не удалось сохранить игру. Проверьте свободное место браузера.");
+        }
+      }
+      function loadSaved() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || !Array.isArray(parsed.players) || !parsed.phase) return null;
+          return parsed;
+        } catch (error) {
+          console.error("Не удалось прочитать сохранённую игру:", error);
+          showToast("Сохранённая игра повреждена и не была загружена.");
+          return null;
+        }
+      }
+      function showToast(text) {
+        const toast = $("#toast");
+        toast.textContent = text;
+        toast.classList.add("show");
+        clearTimeout(toastHandle);
+        toastHandle = setTimeout(() => toast.classList.remove("show"), 2800);
+      }
+      function alivePlayers() { return state.players.filter((player) => player.alive); }
+      function playerById(id) { return state.players.find((player) => player.id === id); }
+      function rolePlayers(role) { return alivePlayers().filter((player) => player.role === role); }
+      function teamOf(player) { return ROLE[player.role]?.team || "unknown"; }
+      function label(id) {
+        const player = playerById(id);
+        return player ? player.name : "неизвестный игрок";
+      }
+      function addLog(text) {
+        state.log.unshift({ text, time: new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) });
+        state.log = state.log.slice(0, 100);
+      }
+      function recordAction(key, value) {
+        state.night.actions[key] = value;
+      }
+      function startGame() {
+        const players = readSetupPlayers();
+        const duplicates = UNIQUE_ROLES.filter((role) => players.filter((player) => player.role === role).length > 1);
+        if (duplicates.length) {
+          showToast(`Уникальная роль назначена несколько раз: ${duplicates.map((role) => ROLE[role].name).join(", ")}.`);
           return;
         }
-        lastPriestTarget = priestId;
-      } else {
-        lastPriestTarget = null;
+        state = {
+          players,
+          phase: "opening",
+          round: 0,
+          openingStep: 0,
+          nightStep: 0,
+          night: { actions: {}, protectedTarget: null, voteTarget: null },
+          previous: { priestess: null, capo: null },
+          priestessSaved: false,
+          log: [],
+          winner: null,
+          note: "",
+          createdAt: new Date().toISOString()
+        };
+        addLog("Партия началась. Город засыпает для ночи знакомства.");
+        save();
+        render();
       }
-
-      let nightVictims = [];
-
-      // Обработка выстрела мафии
-      if (mafiaShotId) {
-        if (mafiaShotId === priestId) {
-          logMessage(`🛡️ Ночью в игрока #${mafiaShotId} стреляла мафия, но Ночная жрица его спасла!`);
-        } else {
-          nightVictims.push(mafiaShotId);
+      function selectMarkup(id, { exclude = [], disabled = false, placeholder = "Выберите игрока" } = {}) {
+        const options = alivePlayers().filter((player) => !exclude.includes(player.id));
+        return `<select id="${id}" class="field" ${disabled ? "disabled" : ""}>
+          <option value="">${placeholder}</option>
+          ${options.map((player) => `<option value="${escapeHtml(player.id)}">${escapeHtml(player.name)} · ${ROLE[player.role]?.name || "без роли"}</option>`).join("")}
+        </select>`;
+      }
+      function actorFor(step) {
+        const actors = rolePlayers(step.key);
+        if (step.key === "mafia") return rolePlayers("mafia").length + rolePlayers("don").length > 0;
+        return actors.length > 0;
+      }
+      function currentNightStep() { return NIGHT_STEPS[state.nightStep] || null; }
+      function openingPanel() {
+        const step = OPENING_STEPS[state.openingStep];
+        if (!step) return `<div class="notice success">Знакомство завершено. Утром город знакомится друг с другом.</div>
+          <div class="phase-actions"><button class="btn primary" data-action="opening-finish">Начать круг знакомства →</button></div>`;
+        return `<div class="stepper">${OPENING_STEPS.map((_, index) => `<span class="step ${index < state.openingStep ? "done" : index === state.openingStep ? "current" : ""}"></span>`).join("")}</div>
+          <div class="action-panel">
+            <div class="action-title"><div><h3>Просыпается: ${escapeHtml(step[0])}</h3><p>${escapeHtml(step[1])}</p></div><span class="status-pill">${state.openingStep + 1} / ${OPENING_STEPS.length}</span></div>
+            <div class="feedback">Отметьте пробуждение и переходите к следующей роли.</div>
+            <div class="action-bottom"><span></span><button class="btn primary" data-action="opening-next">Далее →</button></div>
+          </div>`;
+      }
+      function nextActorIndex(from) {
+        for (let index = from; index < NIGHT_STEPS.length; index += 1) {
+          if (actorFor(NIGHT_STEPS[index])) return index;
         }
+        return -1;
       }
-
-      // Обработка выстрела киллера
-      if (killerShotId) {
-        if (killerShotId === priestId) {
-          logMessage(`🛡️ Ночью в игрока #${killerShotId} стрелял киллер, но Ночная жрица его спасла!`);
+      function actionInput(step) {
+        const actions = state.night.actions;
+        if (step.key === "mafia") return `<div class="action-grid one"><div><label class="form-label" for="target">Цель мафии</label>${selectMarkup("target", { exclude: alivePlayers().filter((p) => teamOf(p) === "mafia").map((p) => p.id) })}</div></div>`;
+        if (step.key === "don") return `<div class="action-grid one"><div><label class="form-label" for="target">Кого проверяет Дон</label>${selectMarkup("target")}</div></div>`;
+        if (step.key === "sheriff") return `<div class="action-grid one"><div><label class="form-label" for="target">Кого проверяет Шериф</label>${selectMarkup("target")}</div></div>`;
+        if (step.key === "killer") return `<div class="action-grid one"><div><label class="form-label" for="target">Цель Киллера</label>${selectMarkup("target", { exclude: rolePlayers("killer").map((p) => p.id) })}</div></div>`;
+        if (step.key === "detective") return `<div class="action-grid">
+          <div><label class="form-label" for="targetA">Первый игрок</label>${selectMarkup("targetA")}</div>
+          <div><label class="form-label" for="targetB">Второй игрок</label>${selectMarkup("targetB")}</div>
+        </div>`;
+        if (step.key === "priestess") {
+          const last = state.previous.priestess;
+          return `<div class="action-grid one"><div><label class="form-label" for="target">Кого лечит Жрица</label>${selectMarkup("target", { exclude: last ? [last] : [] })}</div></div>
+          <div class="feedback" style="margin-top:8px">${state.priestessSaved ? "Спасение уже использовано." : "Спасение ещё доступно."}${last ? ` Нельзя повторно выбрать ${escapeHtml(label(last))} этой ночью.` : ""}</div>`;
+        }
+        if (step.key === "capo") {
+          const last = state.previous.capo;
+          return `<div class="action-grid one"><div><label class="form-label" for="target">Иммунитет от голосования</label>${selectMarkup("target", { exclude: [...rolePlayers("capo").map((p) => p.id), ...(last ? [last] : [])] })}</div></div>
+          <div class="feedback" style="margin-top:8px">${last ? `В прошлую ночь Капо защищал: ${escapeHtml(label(last))}.` : "Нельзя защищать себя."}</div>`;
+        }
+        return "";
+      }
+      function nightPanel() {
+        const step = currentNightStep();
+        if (!step || nextActorIndex(state.nightStep) === -1) {
+          return `<div class="notice success">Все ночные роли сделали свой ход. Нажмите, чтобы узнать, кто пережил эту ночь.</div>
+            <div class="phase-actions"><button class="btn primary" data-action="resolve-night">Рассвет →</button></div>`;
+        }
+        if (!actorFor(step)) {
+          state.nightStep = nextActorIndex(state.nightStep + 1);
+          save();
+          return nightPanel();
+        }
+        const stepIndex = NIGHT_STEPS.indexOf(step);
+        const progress = NIGHT_STEPS.filter((item) => actorFor(item));
+        const progressIndex = progress.findIndex((item) => item.key === step.key);
+        return `<div class="stepper">${progress.map((_, index) => `<span class="step ${index < progressIndex ? "done" : index === progressIndex ? "current" : ""}"></span>`).join("")}</div>
+          <div class="action-panel">
+            <div class="action-title"><div><h3>Просыпается: ${escapeHtml(step.title)}</h3><p>${escapeHtml(step.help)}</p></div><span class="status-pill">${progressIndex + 1} / ${progress.length}</span></div>
+            ${actionInput(step)}
+            <div class="feedback" id="actionFeedback"></div>
+            <div class="action-bottom"><span class="counter">Ход ${state.round} · ночь</span><button class="btn primary" data-action="submit-night" data-step="${stepIndex}">Записать ход →</button></div>
+          </div>`;
+      }
+      function morningPanel() {
+        const deaths = state.lastNightDeaths || [];
+        const message = deaths.length
+          ? `Этой ночью выбыли: ${deaths.map((id) => escapeHtml(label(id))).join(", ")}.`
+          : "Этой ночью никто не погиб. Город может проснуться.";
+        const saveMessage = state.lastNightSaved ? ` Жрица спасла ${escapeHtml(label(state.lastNightSaved))}.` : "";
+        return `<div class="notice ${deaths.length ? "alert" : "success"}"><span>${deaths.length ? "☀" : "✦"}</span><span>${message}${saveMessage}</span></div>
+          <div class="phase-actions"><button class="btn primary" data-action="morning-discussion">Перейти к обсуждению →</button></div>`;
+      }
+      function discussionPanel() {
+        if (state.round === 0) {
+          return `<div class="notice">Первая ночь была ночью знакомства. Дайте игрокам представиться и объясните порядок игры.</div>
+            ${timerMarkup()}
+            <div class="phase-actions"><button class="btn primary" data-action="intro-discussion-finish">Завершить знакомство → Ночь 1</button></div>`;
+        }
+        return `<div class="notice">Город обсуждает события раунда ${state.round}. Запустите таймер, если он нужен, затем переходите к голосованию.</div>
+          ${timerMarkup()}
+          <div class="phase-actions"><button class="btn primary" data-action="to-vote">Перейти к голосованию →</button></div>`;
+      }
+      function timerMarkup() {
+        return `<div class="action-panel"><div class="action-title"><div><h3>Обсуждение</h3><p>Таймер можно изменить справа в панели.</p></div><span class="timer" id="inlineTimer">${formatTime(timerSeconds)}</span></div></div>`;
+      }
+      function votePanel() {
+        const eligible = alivePlayers();
+        return `<div class="action-panel">
+          <div class="action-title"><div><h3>Кого выгоняет город?</h3><p>Запишите итог голосования. Для правила Капо укажите число голосов за выбранного игрока и сколько игроков голосовали.</p></div></div>
+          <div class="action-grid">
+            <div><label class="form-label" for="voteTarget">Кандидат на изгнание</label>${selectMarkup("voteTarget")}</div>
+            <div><label class="form-label" for="voterCount">Всего голосовало</label><input id="voterCount" class="field" type="number" min="1" max="${eligible.length}" value="${eligible.length}"></div>
+            <div><label class="form-label" for="voteCount">Голосов за кандидата</label><input id="voteCount" class="field" type="number" min="0" max="${eligible.length}" value="${Math.floor(eligible.length / 2) + 1}"></div>
+          </div>
+          <div class="feedback" id="voteFeedback" style="margin-top:10px"></div>
+          <div class="action-bottom"><span class="counter">${eligible.length} игроков в игре</span><button class="btn primary" data-action="resolve-vote">Объявить результат</button></div>
+        </div>`;
+      }
+      function endingPanel() {
+        const winners = state.winner === "city" ? "Победа мирного города" : state.winner === "mafia" ? "Победа мафии" : "Победа Киллера";
+        return `<div class="notice success"><span>✦</span><span><strong>${winners}</strong><br>Партия завершена. Результаты сохранены в журнале.</span></div>
+          <div class="phase-actions"><button class="btn primary" data-action="new-game">Новая партия</button><button class="btn ghost" data-action="export">Экспортировать результаты</button></div>`;
+      }
+      function renderPhase() {
+        const config = {
+          opening: ["☾ Первая ночь", "Город засыпает", "Ночь знакомства. Отмечайте пробуждение каждой роли; выбор целей пока не записывается.", `Раунд 0 · знакомство`, openingPanel],
+          introMorning: ["☀ Утро знакомства", "Город просыпается", "Первая ночь прошла без действий. Теперь игроки знакомятся друг с другом.", "Круг знакомства", () => `<div class="notice success">Попросите игроков по очереди представиться. Первая ночь — только знакомство.</div><div class="phase-actions"><button class="btn primary" data-action="intro-discussion">Начать круг знакомства →</button></div>`],
+          discussion: ["◉ Обсуждение", state.round === 0 ? "Круг знакомства" : `День ${state.round} · обсуждение`, state.round === 0 ? "Игроки знакомятся друг с другом за столом." : "Дайте городу обсудить ночь и подозрения.", state.round === 0 ? "Знакомство" : `Раунд ${state.round}`, discussionPanel],
+          night: ["☾ Ночь", `Ночь ${state.round}`, "Город засыпает. Записывайте действия ролей по очереди; результаты увидит только ведущий.", `Раунд ${state.round}`, nightPanel],
+          morning: ["☀ Утро", `Утро · раунд ${state.round}`, "Сводка ночи готова. Объявите игрокам только итог, затем начинайте обсуждение.", `Раунд ${state.round}`, morningPanel],
+          vote: ["⚖ Голосование", `Голосование · раунд ${state.round}`, "Отметьте решение города. При защите Капо большинство голосов не выгоняет игрока.", `Раунд ${state.round}`, votePanel],
+          ended: ["✦ Игра окончена", "Партия завершена", "Итог определён по заданным условиям победы.", "Итог", endingPanel]
+        };
+        const item = config[state.phase] || config.opening;
+        $("#phaseBadge").textContent = item[0];
+        $("#phaseTitle").textContent = item[1];
+        $("#phaseLead").textContent = item[2];
+        $("#roundPill").textContent = item[3];
+        phaseContent.innerHTML = item[4]();
+      }
+      function renderRoster() {
+        const list = $("#roster");
+        const alive = alivePlayers().length;
+        $("#aliveCount").textContent = `${alive} / ${state.players.length} в игре`;
+        list.innerHTML = state.players.map((player) => `<div class="roster-row ${player.alive ? "" : "dead"}">
+          <span class="roster-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>
+          <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}</span>
+        </div>`).join("");
+      }
+      function renderLog() {
+        const log = $("#eventLog");
+        if (!state.log.length) {
+          log.innerHTML = `<p class="empty">Пока событий нет. Они появятся здесь по ходу игры.</p>`;
+          return;
+        }
+        log.innerHTML = state.log.map((entry) => `<div class="log-item"><div>${escapeHtml(entry.text)}<span class="log-time">${escapeHtml(entry.time)}</span></div></div>`).join("");
+      }
+      function render() {
+        if (!state) {
+          $("#setupView").classList.add("active");
+          $("#gameView").classList.remove("active");
+          return;
+        }
+        $("#setupView").classList.remove("active");
+        $("#gameView").classList.add("active");
+        $("#hostNote").value = state.note || "";
+        renderPhase();
+        renderRoster();
+        renderLog();
+        updateTimerDisplay();
+      }
+      function setPhase(phase) {
+        state.phase = phase;
+        save();
+        render();
+      }
+      function beginNight() {
+        state.round += 1;
+        state.night = { actions: {}, protectedTarget: null, voteTarget: null };
+        state.nightStep = nextActorIndex(0);
+        if (state.nightStep < 0) state.nightStep = NIGHT_STEPS.length;
+        addLog(`Началась ночь ${state.round}.`);
+        setPhase("night");
+      }
+      function submitNight(stepKey) {
+        const step = currentNightStep();
+        if (!step || step.key !== stepKey) return;
+        const target = $("#target")?.value || "";
+        if (step.key === "detective") {
+          const first = $("#targetA").value;
+          const second = $("#targetB").value;
+          if (!first || !second || first === second) {
+            showFeedback("Выберите двух разных игроков.", "bad");
+            return;
+          }
+          const sameTeam = teamOf(playerById(first)) === teamOf(playerById(second));
+          recordAction(step.key, { first, second, sameTeam });
+          addLog(`Сыщик сравнил ${label(first)} и ${label(second)}: ${sameTeam ? "одна команда" : "разные команды"}.`);
+          showFeedback(sameTeam ? "Одна команда — 👍" : "Разные команды — 👎", sameTeam ? "good" : "bad");
         } else {
-          if (!nightVictims.includes(killerShotId)) {
-            nightVictims.push(killerShotId);
+          if (!target) {
+            showFeedback("Сначала выберите игрока.", "bad");
+            return;
+          }
+          if (step.key === "priestess" && state.priestessSaved) {
+            showFeedback("Жрица уже использовала спасение за эту игру.", "bad");
+            return;
+          }
+          if (step.key === "priestess" && target === state.previous.priestess) {
+            showFeedback("Жрице нельзя выбирать одну цель две ночи подряд.", "bad");
+            return;
+          }
+          if (step.key === "capo" && target === state.previous.capo) {
+            showFeedback("Капо нельзя защищать одну цель две ночи подряд.", "bad");
+            return;
+          }
+          recordAction(step.key, target);
+          const result = step.key === "don"
+            ? (playerById(target).role === "sheriff" ? "это Шериф" : "это не Шериф")
+            : step.key === "sheriff"
+              ? (teamOf(playerById(target)) === "mafia" ? "мафиози найден — цель выбывает" : "цель не из мафии")
+              : step.key === "priestess"
+                ? "цель защищена от ночных убийств"
+                : step.key === "capo"
+                  ? "цель защищена от дневного голосования"
+                  : "выбор записан";
+          addLog(`${step.title}: ${label(target)} — ${result}.`);
+          showFeedback(`${label(target)}: ${result}.`, step.key === "sheriff" && teamOf(playerById(target)) === "mafia" ? "good" : "");
+        }
+        if (step.key === "priestess") state.previous.priestess = target;
+        if (step.key === "capo") {
+          state.previous.capo = target;
+          state.night.protectedTarget = target;
+        }
+        const next = nextActorIndex(state.nightStep + 1);
+        state.nightStep = next < 0 ? NIGHT_STEPS.length : next;
+        save();
+        setTimeout(render, 500);
+      }
+      function resolveNight() {
+        const actions = state.night.actions;
+        const attempted = new Set();
+        if (actions.mafia) attempted.add(actions.mafia);
+        if (actions.killer) attempted.add(actions.killer);
+        if (actions.sheriff && teamOf(playerById(actions.sheriff)) === "mafia") attempted.add(actions.sheriff);
+        const protectedTarget = actions.priestess || null;
+        state.lastNightSaved = null;
+        if (protectedTarget && !state.priestessSaved && attempted.has(protectedTarget)) {
+          state.priestessSaved = true;
+          state.lastNightSaved = protectedTarget;
+          addLog(`Жрица спасла ${label(protectedTarget)} от ночной гибели. Спасение использовано.`);
+        }
+        const deaths = [...attempted].filter((id) => id !== protectedTarget && playerById(id)?.alive);
+        deaths.forEach((id) => {
+          playerById(id).alive = false;
+          addLog(`${label(id)} выбыл(а) ночью.`);
+        });
+        if (!deaths.length && !state.lastNightSaved) addLog("Ночь прошла без погибших.");
+        state.lastNightDeaths = deaths;
+        state.night.voteTarget = actions.capo || null;
+        addLog(`Наступило утро раунда ${state.round}.`);
+        const winner = determineWinner("night");
+        if (winner) {
+          state.winner = winner;
+          setPhase("ended");
+        } else setPhase("morning");
+      }
+      function determineWinner(stage, expelled = []) {
+        const alive = alivePlayers();
+        const mafia = alive.filter((player) => teamOf(player) === "mafia").length;
+        const city = alive.filter((player) => teamOf(player) === "city").length;
+        const killer = alive.filter((player) => teamOf(player) === "killer").length;
+        if (mafia === 0 && killer === 0) return "city";
+        if (city === 0 && killer === 0 && mafia > 0) return "mafia";
+        if (stage === "vote" && killer > 0 && city === 2) return "killer";
+        return null;
+      }
+      function resolveVote() {
+        const targetId = $("#voteTarget").value;
+        const voters = Number($("#voterCount").value);
+        const votes = Number($("#voteCount").value);
+        const activeCount = alivePlayers().length;
+        if (!targetId) {
+          showFeedback("Выберите игрока, за которого голосовали.", "bad", "#voteFeedback");
+          return;
+        }
+        if (!Number.isInteger(voters) || voters < 1 || voters > activeCount ||
+            !Number.isInteger(votes) || votes < 0 || votes > voters) {
+          showFeedback("Проверьте количество голосовавших и голосов.", "bad", "#voteFeedback");
+          return;
+        }
+        const majority = votes > voters / 2;
+        if (!majority) {
+          addLog(`Голосование: за ${label(targetId)} — ${votes} из ${voters}. Большинства нет, никто не выбыл.`);
+          showToast("Большинства нет — голосование не изменило состав игроков.");
+          beginNight();
+          return;
+        }
+        if (state.night.voteTarget === targetId) {
+          addLog(`Капо защитил ${label(targetId)}. Голосование не состоялось.`);
+          showToast(`Голосование не состоялось: ${label(targetId)} защищён Капо.`);
+          state.night.voteTarget = null;
+          beginNight();
+          return;
+        }
+        const votedOut = playerById(targetId);
+        votedOut.alive = false;
+        addLog(`${label(targetId)} изгнан(а) большинством голосов (${votes} из ${voters}).`);
+        if (votedOut.role === "capo" && state.night.voteTarget) {
+          const protectedPlayer = playerById(state.night.voteTarget);
+          if (protectedPlayer?.alive) {
+            protectedPlayer.alive = false;
+            addLog(`${label(state.night.voteTarget)} покинул(а) стол вместе с Капо.`);
           }
         }
+        const winner = determineWinner("vote", [targetId]);
+        if (winner) {
+          state.winner = winner;
+          addLog(`Победа: ${winner === "city" ? "мирный город" : winner === "mafia" ? "мафия" : "Киллер"}.`);
+          setPhase("ended");
+          return;
+        }
+        beginNight();
+      }
+      function showFeedback(text, kind = "", selector = "#actionFeedback") {
+        const element = $(selector);
+        if (!element) return;
+        element.textContent = text;
+        element.className = `feedback ${kind}`;
+      }
+      function formatTime(total) {
+        const minutes = Math.floor(Math.max(0, total) / 60);
+        const seconds = Math.max(0, total) % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+      function updateTimerDisplay() {
+        $("#timerDisplay").textContent = formatTime(timerSeconds);
+        const inline = $("#inlineTimer");
+        if (inline) inline.textContent = formatTime(timerSeconds);
+      }
+      function toggleTimer() {
+        if (timerHandle) {
+          clearInterval(timerHandle);
+          timerHandle = null;
+          $("#timerToggle").textContent = "▶ Старт";
+          return;
+        }
+        $("#timerToggle").textContent = "Ⅱ Пауза";
+        timerHandle = setInterval(() => {
+          timerSeconds = Math.max(0, timerSeconds - 1);
+          updateTimerDisplay();
+          if (!timerSeconds) {
+            clearInterval(timerHandle);
+            timerHandle = null;
+            $("#timerToggle").textContent = "▶ Старт";
+            showToast("Время обсуждения закончилось.");
+            if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+          }
+        }, 1000);
+      }
+      function resetTimer() {
+        if (timerHandle) clearInterval(timerHandle);
+        timerHandle = null;
+        timerSeconds = Number($("#timerLength").value);
+        $("#timerToggle").textContent = "▶ Старт";
+        updateTimerDisplay();
+      }
+      function exportGame() {
+        const data = {
+          exportedAt: new Date().toISOString(),
+          players: state.players.map(({ id, name, role, alive }) => ({ id, name, role: ROLE[role]?.name || role, alive })),
+          round: state.round,
+          winner: state.winner,
+          events: state.log,
+          note: state.note
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `mafia-game-${new Date().toISOString().slice(0, 10)}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast("История игры экспортирована в JSON.");
+      }
+      function openModal(title, body, actions = []) {
+        $("#modalTitle").textContent = title;
+        $("#modalBody").innerHTML = body;
+        $("#modalActions").innerHTML = "";
+        actions.forEach(({ text, primary, callback }) => {
+          const button = document.createElement("button");
+          button.className = `btn ${primary ? "primary" : "ghost"}`;
+          button.textContent = text;
+          button.addEventListener("click", () => {
+            $("#modalBackdrop").classList.remove("open");
+            callback?.();
+          });
+          $("#modalActions").append(button);
+        });
+        $("#modalBackdrop").classList.add("open");
+      }
+      function showGuide() {
+        const rows = ROLE_ORDER.filter((role) => role !== "none").map((role) =>
+          `<div class="role-guide-row"><strong>${ROLE[role].name}</strong><p>${ROLE_TEXT[role]}</p></div>`
+        ).join("");
+        openModal("Памятка по ролям", `<p>Состав команды и подсказки ведущему. Результаты ходов показываются в этой панели, а не игрокам.</p><div class="role-guide">${rows}</div>`, [{ text: "Понятно", primary: true }]);
+      }
+      function confirmNewGame() {
+        openModal("Завершить эту партию?", "<p>Текущая игра будет заменена новой. Если хотите сохранить историю, сначала экспортируйте её.</p>", [
+          { text: "Отмена" },
+          { text: "Новая партия", primary: true, callback: () => {
+            state = null;
+            localStorage.removeItem(STORAGE_KEY);
+            $("#setupView").classList.add("active");
+            $("#gameView").classList.remove("active");
+            playerRows(Number($("#countValue").textContent), []);
+          } }
+        ]);
+      }
+      function handleAction(action, button) {
+        if (action === "opening-next") {
+          state.openingStep += 1;
+          if (state.openingStep >= OPENING_STEPS.length) state.phase = "introMorning";
+          addLog(`Ночь знакомства: ${OPENING_STEPS[Math.min(state.openingStep - 1, OPENING_STEPS.length - 1)][0]} проснулся(ась).`);
+          save(); render();
+        } else if (action === "opening-finish") {
+          state.phase = "introMorning"; save(); render();
+        } else if (action === "intro-discussion") {
+          state.phase = "discussion"; addLog("Город начал круг знакомства."); save(); render();
+        } else if (action === "intro-discussion-finish") {
+          addLog("Круг знакомства завершён."); beginNight();
+        } else if (action === "submit-night") {
+          submitNight(NIGHT_STEPS[Number(button.dataset.step)]?.key);
+        } else if (action === "resolve-night") resolveNight();
+        else if (action === "morning-discussion") {
+          state.phase = "discussion"; addLog(`Началось обсуждение раунда ${state.round}.`); save(); render();
+        } else if (action === "to-vote") {
+          state.phase = "vote"; addLog(`Началось голосование раунда ${state.round}.`); save(); render();
+        } else if (action === "resolve-vote") resolveVote();
+        else if (action === "new-game") confirmNewGame();
+        else if (action === "export") exportGame();
       }
 
-      // Убиваем жертв
-      let deadNicks = [];
-      nightVictims.forEach(vId => {
-        let victim = players.find(p => p.id == vId);
-        if (victim && victim.alive) {
-          victim.alive = false;
-          deadNicks.name = victim.nickname;
-          deadNicks.push(`#${victim.id} ${victim.nickname} (${victim.role})`);
+      $("#countMinus").addEventListener("click", () => {
+        const count = Math.max(1, Number($("#countValue").textContent) - 1);
+        $("#countValue").textContent = count;
+        playerRows(count, readSetupPlayers());
+      });
+      $("#countPlus").addEventListener("click", () => {
+        const current = readSetupPlayers();
+        const count = Math.min(16, current.length + 1);
+        $("#countValue").textContent = count;
+        playerRows(count, current);
+      });
+      $("#startButton").addEventListener("click", startGame);
+      $("#guideButton").addEventListener("click", showGuide);
+      $("#saveButton").addEventListener("click", () => {
+        if (state) { save(); showToast("Игра сохранена на этом устройстве."); }
+        else showToast("Сначала начните игру.");
+      });
+      $("#exportButton").addEventListener("click", exportGame);
+      $("#timerToggle").addEventListener("click", toggleTimer);
+      $("#timerReset").addEventListener("click", resetTimer);
+      $("#timerLength").addEventListener("change", resetTimer);
+      $("#hostNote").addEventListener("input", (event) => {
+        if (!state) return;
+        state.note = event.target.value;
+        save();
+      });
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-action]");
+        if (button) handleAction(button.dataset.action, button);
+        if (event.target === $("#modalBackdrop")) $("#modalBackdrop").classList.remove("open");
+      });
+      document.addEventListener("change", (event) => {
+        if (event.target.id === "voteCount" || event.target.id === "voterCount") {
+          const votes = Number($("#voteCount")?.value || 0);
+          const voters = Number($("#voterCount")?.value || 0);
+          const feedback = $("#voteFeedback");
+          if (feedback) {
+            feedback.textContent = votes > voters / 2 ? "Большинство набрано." : "Большинства пока нет.";
+            feedback.className = `feedback ${votes > voters / 2 ? "good" : ""}`;
+          }
         }
       });
-
-      // Проверка Дона на Шерифа
-      let donMessage = "";
-      if (donCheckId) {
-        let checkedP = players.find(p => p.id == donCheckId);
-        if (checkedP && checkedP.role === "Шериф") {
-          donMessage = `🎯 Дон мафии нашел Шерифа (#${checkedP.id} ${checkedP.nickname})!`;
-        } else {
-          donMessage = `🎯 Дон мафии проверил игрока #${checkedP.id}, это не Шериф.`;
-        }
-        logMessage(donMessage);
-      }
-
-      // Формирование объявления для ведущего
-      let announcement = "";
-      if (deadNicks.length > 0) {
-        announcement = `💀 <b>Этой ночью погибли:</b><br>${deadNicks.join('<br>')}`;
-        logMessage(`💀 Ночью погибли: ${deadNicks.join(', ')}`);
-      } else {
-        announcement = `🕊️ <b>Город спал спокойно:</b> этой ночью никто не погиб.`;
-        logMessage(`🕊️ Ночь прошла без жертв.`);
-      }
-
-      document.getElementById('night-screen').classList.remove('active');
-      document.getElementById('day-screen').classList.add('active');
-      document.getElementById('day-title').innerText = `☀️ День ${currentDay}`;
-      document.getElementById('night-results-announcement').innerHTML = announcement;
-
-      renderDayPlayers();
-      checkWinConditions();
-    }
-
-    function renderDayPlayers() {
-      let list = document.getElementById('day-players-list');
-      list.innerHTML = players.map(p => `
-        <div class="player-row ${p.alive ? '' : 'dead'}">
-          <div>
-            <strong>#${p.id} ${p.nickname}</strong> 
-            <span class="badge">${p.role}</span>
-            ${p.fouls > 0 ? `<span style="color:var(--warning); font-size:12px;"> ⚠️${p.fouls} фола</span>` : ''}
-          </div>
-          <div>
-            ${p.alive ? `<button class="small-btn" style="background:#e65100; color:#fff;" onclick="addFoul(${p.id})">+Фол</button>` : ''}
-            ${p.alive ? `<button class="small-btn" style="background:#b71c1c; color:#fff;" onclick="killPlayerManual(${p.id})">Убить</button>` : ''}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function addFoul(id) {
-      let p = players.find(x => x.id === id);
-      if (p) {
-        p.fouls++;
-        logMessage(`⚠️ Игрок #${p.id} ${p.nickname} получил фол (${p.fouls}/4).`);
-        if (p.fouls >= 4) {
-          p.alive = false;
-          logMessage(`❌ Игрок #${p.id} ${p.nickname} дисквалифицирован за 4 фола!`);
-        }
-        renderDayPlayers();
-      }
-    }
-
-    function killPlayerManual(id) {
-      let p = players.find(x => x.id === id);
-      if (p) {
-        p.alive = false;
-        logMessage(`💀 Ведущий принудительно вывел из игры игрока #${p.id} ${p.nickname} (${p.role}).`);
-        renderDayPlayers();
-        checkWinConditions();
-      }
-    }
-
-    function openVotingScreen() {
-      document.getElementById('day-screen').classList.remove('active');
-      document.getElementById('voting-screen').classList.add('active');
-
-      let alivePlayers = players.filter(p => p.alive);
-      let container = document.getElementById('voting-inputs-container');
-      
-      container.innerHTML = alivePlayers.map(p => `
-        <div style="margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
-          <span>#${p.id} ${p.nickname}</span>
-          <input type="number" min="0" value="0" id="vote-count-${p.id}" style="width: 80px;">
-        </div>
-      `).join('');
-    }
-
-    function finalizeVoting() {
-      let maxVotes = -1;
-      let candidateId = null;
-      let tie = false;
-
-      players.filter(p => p.alive).forEach(p => {
-        let input = document.getElementById(`vote-count-${p.id}`);
-        let votes = input ? parseInt(input.value) || 0 : 0;
-        if (votes > maxVotes) {
-          maxVotes = votes;
-          candidateId = p.id;
-          tie = false;
-        } else if (votes === maxVotes && votes > 0) {
-          tie = true;
-        }
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") $("#modalBackdrop").classList.remove("open");
       });
 
-      if (tie || maxVotes <= 0) {
-        alert("Голосование завершено: никто не набрал больше всего голосов или зафиксирована ничья (автокатастрофа). Никто не выгнан.");
-        logMessage(`🗳️ Голоса разделись равным образом или никто не выставлен. Город продолжает игру.`);
-      } else {
-        let expelled = players.find(p => p.id == candidateId);
-        if (expelled) {
-          expelled.alive = false;
-          alert(`По итогам голосования город покидает #${expelled.id} ${expelled.nickname} (${expelled.role})!`);
-          logMessage(`🗳️ По итогам дневного голосования из игры выгнан #${expelled.id} ${expelled.nickname} (${expelled.role}).`);
-        }
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        try { tg.setHeaderColor("#17191f"); } catch (error) { console.warn("Цвет заголовка недоступен:", error); }
       }
-
-      document.getElementById('voting-screen').classList.remove('active');
-      document.getElementById('day-screen').classList.add('active');
-      renderDayPlayers();
-      checkWinConditions();
-    }
-
-    function checkWinConditions() {
-      let aliveList = players.filter(p => p.alive);
-      let mafiaTeamAlive = aliveList.filter(p => ["Мафия", "Дон Мафии", "Капо"].includes(p.role));
-      let townTeamAlive = aliveList.filter(p => ["Мирный житель", "Шериф", "Сыщик", "Ночная жрица"].includes(p.role));
-      let killerAlive = aliveList.filter(p => p.role === "Киллер");
-
-      if (mafiaTeamAlive.length === 0 && killerAlive.length === 0) {
-        alert("🎉 Победа Мирного города! Все мафии и киллер уничтожены.");
-        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Мирного города!");
-        return;
-      }
-      if (mafiaTeamAlive.length >= townTeamAlive.length + killerAlive.length && mafiaTeamAlive.length > 0) {
-        alert("😈 Победа Мафии! Клан мафии захватил город.");
-        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Мафии!");
-        return;
-      }
-      // Условие победы киллера (если осталось 2 мирных и киллер)
-      if (killerAlive.length > 0 && mafiaTeamAlive.length === 0 && townTeamAlive.length <= 2) {
-        alert("🗡️ Победа Киллера! Ему удалось устранить всех конкурентов.");
-        logMessage("🏆 КОНЕЦ ИГРЫ: Победа Киллера!");
-        return;
-      }
-    }
+      playerRows(6);
+      state = loadSaved();
+      if (state) render();
+    })();
   </script>
 </body>
 </html>
