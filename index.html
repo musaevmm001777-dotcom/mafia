@@ -8,173 +8,40 @@
   <title>Мафия — пульт ведущего</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #17191f;
-      --panel: #20232b;
-      --panel-2: #292d37;
-      --line: #383d49;
-      --text: #f5f1e9;
-      --muted: #9ba1ae;
-      --gold: #d7b779;
-      --gold-2: #f0d7a5;
-      --red: #e17d79;
-      --green: #8dc5a0;
-      --blue: #91b5e7;
-      --radius: 18px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      color: var(--text);
-      background:
-        radial-gradient(ellipse at 75% -20%, #51432d55 0, transparent 42%),
-        var(--bg);
-    }
-    button, input, select { font: inherit; }
-    button { color: inherit; }
-    .app { width: min(1120px, 100%); margin: auto; padding: 20px 22px 48px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 24px; }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #806a43; border-radius: 14px; color: var(--gold-2); background: #322c22; font-size: 21px; }
-    .brand h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 600; letter-spacing: .02em; }
-    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
-    .top-actions { display: flex; gap: 8px; }
-    .icon-btn, .btn, .small-btn {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--panel);
-      cursor: pointer;
-      transition: .18s ease;
-    }
-    .icon-btn { width: 42px; height: 42px; color: var(--muted); font-size: 17px; }
-    .icon-btn:hover, .small-btn:hover { border-color: var(--gold); color: var(--gold-2); }
-    .btn { min-height: 46px; padding: 0 17px; font-weight: 650; }
-    .btn:hover { transform: translateY(-1px); border-color: #aa8e59; }
-    .btn.primary { color: #241f17; border-color: var(--gold); background: var(--gold); }
-    .btn.primary:hover { background: var(--gold-2); }
-    .btn.ghost { background: transparent; }
-    .btn.danger { color: #ffc5c0; border-color: #673b3c; background: #382526; }
-    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-    .small-btn { padding: 7px 10px; color: var(--muted); font-size: 12px; }
-    .view { display: none; }
-    .view.active { display: block; }
-    .setup-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); gap: 18px; align-items: start; }
-    .card { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, #242731, #1e2027); box-shadow: 0 12px 34px #00000012; }
-    .card-pad { padding: 22px; }
-    .eyebrow { color: var(--gold); font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
-    h2, h3, p { margin-top: 0; }
-    h2 { margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(23px, 4vw, 32px); font-weight: 500; }
-    .subtle { color: var(--muted); line-height: 1.55; }
-    .count-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 14px; }
-    .count-control { display: flex; align-items: center; gap: 13px; padding: 5px; border: 1px solid var(--line); border-radius: 14px; background: #191b21; }
-    .count-control button { width: 36px; height: 36px; border: 0; border-radius: 10px; color: var(--gold-2); background: var(--panel-2); font-size: 20px; cursor: pointer; }
-    .count-number { min-width: 28px; text-align: center; font-size: 18px; font-weight: 700; }
-    .player-list { display: grid; gap: 8px; max-height: 52vh; overflow: auto; padding-right: 3px; }
-    .player-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(138px, .76fr); gap: 9px; align-items: center; }
-    .player-number { color: var(--muted); text-align: center; font-size: 12px; }
-    .field, .role-select {
-      width: 100%; min-width: 0; height: 43px; padding: 0 12px;
-      border: 1px solid var(--line); border-radius: 11px; outline: none;
-      color: var(--text); background: #191b22;
-    }
-    .field:focus, .role-select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #d7b77920; }
-    .role-select { color: #ded8cd; font-size: 13px; }
-    .role-hint { display: flex; gap: 9px; margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-    .role-hint span { color: var(--gold); }
-    .rules-list { display: grid; gap: 11px; margin: 19px 0 0; padding: 0; list-style: none; }
-    .rules-list li { display: flex; gap: 10px; color: #d0d0d4; font-size: 13px; line-height: 1.45; }
-    .rules-list b { flex: 0 0 23px; color: var(--gold); font-size: 14px; }
-    .setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
-    .privacy-note { color: var(--muted); font-size: 11px; }
-    .game-grid { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; align-items: start; }
-    .main-column { min-width: 0; }
-    .phase-card { position: relative; overflow: hidden; padding: 25px; }
-    .phase-card::after { position: absolute; top: -78px; right: -52px; width: 190px; height: 190px; border: 1px solid #d7b77922; border-radius: 50%; content: ""; box-shadow: 0 0 0 26px #d7b77908, 0 0 0 54px #d7b77906; pointer-events: none; }
-    .phase-top { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 16px; }
-    .phase-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #796641; border-radius: 99px; color: var(--gold-2); background: #342e23; font-size: 11px; font-weight: 700; }
-    .phase-card h2 { position: relative; z-index: 1; margin: 16px 0 7px; }
-    .phase-lead { position: relative; z-index: 1; max-width: 650px; margin: 0; color: #b9bbc2; line-height: 1.55; }
-    .phase-content { margin-top: 20px; }
-    .stepper { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 22px 0 0; }
-    .step { height: 4px; border-radius: 4px; background: #3c4049; }
-    .step.done, .step.current { background: var(--gold); }
-    .action-panel { margin-top: 17px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: #191b22; }
-    .action-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; margin-bottom: 13px; }
-    .action-title h3 { margin: 0 0 4px; font-size: 16px; }
-    .action-title p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .action-grid.one { grid-template-columns: 1fr; }
-    .form-label { display: block; margin: 0 0 6px; color: #bcbec5; font-size: 11px; font-weight: 650; }
-    .action-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 15px; }
-    .feedback { min-height: 18px; color: var(--muted); font-size: 12px; }
-    .feedback.good { color: var(--green); }
-    .feedback.bad { color: #f0a09a; }
-    .phase-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
-    .notice { display: flex; gap: 11px; align-items: start; margin-top: 15px; padding: 13px 14px; border: 1px solid #6a583b; border-radius: 13px; color: #e4d1a9; background: #302a20; font-size: 13px; line-height: 1.5; }
-    .notice.success { border-color: #3b604b; color: #b5ddc1; background: #1e3027; }
-    .notice.alert { border-color: #663e3e; color: #f1b6ae; background: #342323; }
-    .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .side-stack { display: grid; gap: 14px; }
-    .side-card { padding: 17px; }
-    .side-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 11px; }
-    .side-heading h3 { margin: 0; font-size: 14px; }
-    .counter { color: var(--muted); font-size: 11px; }
-    .roster { display: grid; gap: 6px; max-height: 350px; overflow: auto; }
-    .roster-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid transparent; border-radius: 10px; background: #1a1c23; }
-    .roster-row.dead { opacity: .45; }
-    .roster-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-    .roster-meta { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; white-space: nowrap; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
-    .dead .dot { background: var(--red); }
-    .log { display: grid; gap: 9px; max-height: 220px; overflow: auto; }
-    .log-item { display: grid; grid-template-columns: 10px 1fr; gap: 8px; color: #c2c3c9; font-size: 11px; line-height: 1.45; }
-    .log-item::before { width: 6px; height: 6px; margin-top: 4px; border-radius: 50%; background: var(--gold); content: ""; }
-    .log-time { display: block; margin-top: 2px; color: #777e8b; font-size: 10px; }
-    .empty { color: var(--muted); font-size: 12px; line-height: 1.5; }
-    .status-pill { display: inline-flex; padding: 5px 8px; border-radius: 99px; color: var(--muted); background: #292c34; font-size: 10px; }
-    .timer { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; letter-spacing: .06em; }
-    .timer-controls { display: flex; gap: 7px; margin-top: 9px; }
-    .modal-backdrop { position: fixed; z-index: 20; inset: 0; display: none; align-items: center; justify-content: center; padding: 18px; background: #08090dc9; }
-    .modal-backdrop.open { display: flex; }
-    .modal { width: min(500px, 100%); max-height: 85vh; overflow: auto; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #22252d; box-shadow: 0 20px 80px #0008; }
-    .modal h2 { margin-bottom: 7px; font-size: 24px; }
-    .modal p { color: var(--muted); line-height: 1.55; }
-    .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-    .role-guide { display: grid; gap: 8px; margin-top: 16px; }
-    .role-guide-row { padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: #1a1c23; }
-    .role-guide-row strong { color: var(--gold-2); font-size: 13px; }
-    .role-guide-row p { margin: 4px 0 0; font-size: 12px; }
-    .toast { position: fixed; z-index: 30; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); max-width: calc(100% - 36px); padding: 12px 15px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: #30343e; box-shadow: 0 8px 30px #0005; opacity: 0; transform: translateY(12px); transition: .2s; pointer-events: none; font-size: 13px; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    @media (max-width: 780px) {
-      .app { padding: 14px 14px calc(34px + env(safe-area-inset-bottom)); }
-      .setup-layout, .game-grid { grid-template-columns: 1fr; }
-      .side-stack { grid-template-columns: 1fr 1fr; }
-      .roster { max-height: 280px; }
-    }
-    @media (max-width: 520px) {
-      .topbar { margin-bottom: 16px; }
-      .brand h1 { font-size: 18px; }
-      .brand p { font-size: 10px; }
-      .brand-mark { width: 38px; height: 38px; }
-      .icon-btn { width: 38px; height: 38px; }
-      .setup-card.card-pad, .phase-card { padding: 18px; }
-      .player-row { grid-template-columns: 25px minmax(0, 1fr) 120px; gap: 6px; }
-      .field, .role-select { height: 41px; padding: 0 9px; font-size: 12px; }
-      .side-stack { grid-template-columns: 1fr; }
-      .action-grid, .two-column { grid-template-columns: 1fr; }
-      .phase-actions .btn { flex: 1 1 100%; }
-      .setup-footer { align-items: stretch; flex-direction: column; }
-      .setup-footer .btn { width: 100%; }
-      .privacy-note { text-align: center; }
-      .phase-top { flex-direction: column; }
-    }
-  </style>
+:root{color-scheme:dark;--bg:#17191f;--panel:#20232b;--panel-2:#292d37;--line:#383d49;--text:#f5f1e9;--muted:#9ba1ae;--gold:#d7b779;--gold-2:#f0d7a5;--red:#e17d79;--green:#8dc5a0;--blue:#91b5e7;--radius:18px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;}*{box-sizing:border-box;}body{margin:0;min-width:320px;min-height:100vh;color:var(--text);background:radial-gradient(ellipse at 75% -20%,#51432d55 0,transparent 42%),var(--bg);}button,input,select{font:inherit;}
+button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 48px;}.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;}.brand{display:flex;align-items:center;gap:12px;}
+.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #806a43;border-radius:14px;color:var(--gold-2);background:#322c22;font-size:21px;}.brand h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:21px;font-weight:600;letter-spacing:.02em;}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px;}.top-actions{display:flex;gap:8px;}
+.icon-btn,.btn,.small-btn{border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;transition:.18s ease;}.icon-btn{width:42px;height:42px;color:var(--muted);font-size:17px;}.icon-btn:hover,.small-btn:hover{border-color:var(--gold);color:var(--gold-2);}.btn{min-height:46px;padding:0 17px;font-weight:650;}
+.btn:hover{transform:translateY(-1px);border-color:#aa8e59;}.btn.primary{color:#241f17;border-color:var(--gold);background:var(--gold);}.btn.primary:hover{background:var(--gold-2);}.btn.ghost{background:transparent;}
+.btn.danger{color:#ffc5c0;border-color:#673b3c;background:#382526;}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}.small-btn{padding:7px 10px;color:var(--muted);font-size:12px;}.view{display:none;}
+.view.active{display:block;}.setup-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(270px,.85fr);gap:18px;align-items:start;}.card{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,#242731,#1e2027);box-shadow:0 12px 34px #00000012;}.card-pad{padding:22px;}
+.eyebrow{color:var(--gold);font-size:11px;font-weight:750;letter-spacing:.16em;text-transform:uppercase;}h2,h3,p{margin-top:0;}h2{margin-bottom:8px;font-family:Georgia,"Times New Roman",serif;font-size:clamp(23px,4vw,32px);font-weight:500;}.subtle{color:var(--muted);line-height:1.55;}
+.count-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 14px;}.count-control{display:flex;align-items:center;gap:13px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#191b21;}.count-control button{width:36px;height:36px;border:0;border-radius:10px;color:var(--gold-2);background:var(--panel-2);font-size:20px;cursor:pointer;}.count-number{min-width:28px;text-align:center;font-size:18px;font-weight:700;}
+.player-list{display:grid;gap:8px;max-height:52vh;overflow:auto;padding-right:3px;}.player-row{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;}.player-number{color:var(--muted);text-align:center;font-size:12px;}.field,.role-select{width:100%;min-width:0;height:43px;padding:0 12px;border:1px solid var(--line);border-radius:11px;outline:none;color:var(--text);background:#191b22;}
+.field:focus,.role-select:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d7b77920;}.role-select{color:#ded8cd;font-size:13px;}.role-hint{display:flex;gap:9px;margin:13px 0 0;color:var(--muted);font-size:12px;line-height:1.5;}.role-hint span{color:var(--gold);}
+.rules-list{display:grid;gap:11px;margin:19px 0 0;padding:0;list-style:none;}.rules-list li{display:flex;gap:10px;color:#d0d0d4;font-size:13px;line-height:1.45;}.rules-list b{flex:0 0 23px;color:var(--gold);font-size:14px;}.setup-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;}
+.privacy-note{color:var(--muted);font-size:11px;}.game-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;}.main-column{min-width:0;}.phase-card{position:relative;overflow:hidden;padding:25px;}
+.phase-card::after{position:absolute;top:-78px;right:-52px;width:190px;height:190px;border:1px solid #d7b77922;border-radius:50%;content:"";box-shadow:0 0 0 26px #d7b77908,0 0 0 54px #d7b77906;pointer-events:none;}.phase-top{position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;}.phase-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #796641;border-radius:99px;color:var(--gold-2);background:#342e23;font-size:11px;font-weight:700;}.phase-card h2{position:relative;z-index:1;margin:16px 0 7px;}
+.phase-lead{position:relative;z-index:1;max-width:650px;margin:0;color:#b9bbc2;line-height:1.55;}.phase-content{margin-top:20px;}.stepper{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:22px 0 0;}.step{height:4px;border-radius:4px;background:#3c4049;}
+.step.done,.step.current{background:var(--gold);}.action-panel{margin-top:17px;padding:18px;border:1px solid var(--line);border-radius:15px;background:#191b22;}.action-title{display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:13px;}.action-title h3{margin:0 0 4px;font-size:16px;}
+.action-title p{margin:0;color:var(--muted);font-size:12px;line-height:1.45;}.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}.action-grid.one{grid-template-columns:1fr;}.form-label{display:block;margin:0 0 6px;color:#bcbec5;font-size:11px;font-weight:650;}
+.action-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:15px;}.feedback{min-height:18px;color:var(--muted);font-size:12px;}.feedback.good{color:var(--green);}.feedback.bad{color:#f0a09a;}
+.phase-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px;}.notice{display:flex;gap:11px;align-items:start;margin-top:15px;padding:13px 14px;border:1px solid #6a583b;border-radius:13px;color:#e4d1a9;background:#302a20;font-size:13px;line-height:1.5;}.notice.success{border-color:#3b604b;color:#b5ddc1;background:#1e3027;}.notice.alert{border-color:#663e3e;color:#f1b6ae;background:#342323;}
+.two-column{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.side-stack{display:grid;gap:14px;}.side-card{padding:17px;}.side-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px;}
+.side-heading h3{margin:0;font-size:14px;}.counter{color:var(--muted);font-size:11px;}.roster{display:grid;gap:6px;max-height:350px;overflow:auto;}.roster-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 9px;border:1px solid transparent;border-radius:10px;background:#1a1c23;}
+.roster-row.dead{opacity:.45;}.roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}.roster-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;white-space:nowrap;}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+.dead .dot{background:var(--red);}.log{display:grid;gap:9px;max-height:220px;overflow:auto;}.log-item{display:grid;grid-template-columns:10px 1fr;gap:8px;color:#c2c3c9;font-size:11px;line-height:1.45;}.log-item::before{width:6px;height:6px;margin-top:4px;border-radius:50%;background:var(--gold);content:"";}
+.log-time{display:block;margin-top:2px;color:#777e8b;font-size:10px;}.empty{color:var(--muted);font-size:12px;line-height:1.5;}.status-pill{display:inline-flex;padding:5px 8px;border-radius:99px;color:var(--muted);background:#292c34;font-size:10px;}.timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;letter-spacing:.06em;}
+.timer-controls{display:flex;gap:7px;margin-top:9px;}.modal-backdrop{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:#08090dc9;}.modal-backdrop.open{display:flex;}.modal{width:min(500px,100%);max-height:85vh;overflow:auto;padding:22px;border:1px solid var(--line);border-radius:18px;background:#22252d;box-shadow:0 20px 80px #0008;}
+.modal h2{margin-bottom:7px;font-size:24px;}.modal p{color:var(--muted);line-height:1.55;}.modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}.role-guide{display:grid;gap:8px;margin-top:16px;}
+.role-guide-row{padding:11px;border:1px solid var(--line);border-radius:11px;background:#1a1c23;}.role-guide-row strong{color:var(--gold-2);font-size:13px;}.role-guide-row p{margin:4px 0 0;font-size:12px;}.toast{position:fixed;z-index:30;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:calc(100% - 36px);padding:12px 15px;border:1px solid var(--line);border-radius:12px;color:var(--text);background:#30343e;box-shadow:0 8px 30px #0005;opacity:0;transform:translateY(12px);transition:.2s;pointer-events:none;font-size:13px;}
+.toast.show{opacity:1;transform:translateY(0);}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}@media (max-width:780px){.app{padding:14px 14px calc(34px + env(safe-area-inset-bottom));}.setup-layout,.game-grid{grid-template-columns:1fr;}
+.side-stack{grid-template-columns:1fr 1fr;}.roster{max-height:280px;}}@media (max-width:520px){.topbar{margin-bottom:16px;}
+.brand h1{font-size:18px;}.brand p{font-size:10px;}.brand-mark{width:38px;height:38px;}.icon-btn{width:38px;height:38px;}
+.setup-card.card-pad,.phase-card{padding:18px;}.player-row{grid-template-columns:25px minmax(0,1fr);gap:6px;}.field,.role-select{height:41px;padding:0 9px;font-size:12px;}.side-stack{grid-template-columns:1fr;}
+.action-grid,.two-column{grid-template-columns:1fr;}.phase-actions .btn{flex:1 1 100%;}.setup-footer{align-items:stretch;flex-direction:column;}.setup-footer .btn{width:100%;}
+.privacy-note{text-align:center;}.phase-top{flex-direction:column;}}
+</style>
 </head>
 <body>
   <div class="app">
@@ -195,7 +62,7 @@
           <div class="card card-pad setup-card">
             <div class="eyebrow">Новая партия</div>
             <h2>Соберите свой город</h2>
-            <p class="subtle">Введите игровые ники и назначьте роли. Роли видны только ведущему на этом устройстве.</p>
+            <p class="subtle">Введите только игровые ники. Роли вы отметите во время первой ночи, когда игроки будут просыпаться.</p>
             <div class="count-row">
               <strong>Игроки за столом</strong>
               <div class="count-control" aria-label="Количество игроков">
@@ -205,7 +72,7 @@
               </div>
             </div>
             <div class="player-list" id="setupPlayers"></div>
-            <p class="role-hint"><span>✦</span> Можно назначить несколько мирных жителей и мафиози. Уникальные роли — по одной на игру.</p>
+            <p class="role-hint"><span>✦</span> Роли заранее знать не нужно. Во время знакомства укажите Дона, мафию и просыпающиеся роли; остальных приложение отметит мирными.</p>
             <div class="setup-footer">
               <span class="privacy-note">Игра автоматически сохраняется в этом браузере</span>
               <button class="btn primary" id="startButton">Начать игру <span aria-hidden="true">→</span></button>
@@ -297,11 +164,12 @@
       const ROLE_ORDER = ["none", "civilian", "mafia", "don", "sheriff", "killer", "priestess", "detective", "capo"];
       const UNIQUE_ROLES = ["don", "sheriff", "killer", "priestess", "detective", "capo"];
       const OPENING_STEPS = [
-        ["Мафия и Дон", "Мафия знакомится и узнаёт Дона."],
-        ["Шериф", "Шериф показывает ведущему свою карту."],
-        ["Киллер", "Киллер показывает ведущему свою карту."],
-        ["Ночная жрица", "Жрица показывает ведущему свою карту."],
-        ["Сыщик", "Сыщик показывает ведущему свою карту."]
+        { key: "mafia", title: "Мафия и Дон", help: "Выберите Дона и отметьте всех игроков, которые показали карту Мафии." },
+        { key: "sheriff", title: "Шериф", help: "Выберите игрока, который показал карту Шерифа." },
+        { key: "killer", title: "Киллер", help: "Выберите игрока, который показал карту Киллера." },
+        { key: "priestess", title: "Ночная жрица", help: "Выберите игрока, который показал карту Жрицы." },
+        { key: "detective", title: "Сыщик", help: "Выберите игрока, который показал карту Сыщика." },
+        { key: "capo", title: "Капо", help: "Если Капо есть в партии, выберите игрока, который показал эту карту." }
       ];
       const NIGHT_STEPS = [
         { key: "mafia", title: "Мафия и Дон", help: "Команда выбирает одного игрока для ночного убийства." },
@@ -336,11 +204,6 @@
           "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
         }[char]));
       }
-      function roleOptions(selected = "none") {
-        return ROLE_ORDER.map((key) =>
-          `<option value="${key}" ${selected === key ? "selected" : ""}>${ROLE[key].name}</option>`
-        ).join("");
-      }
       function playerRows(count, previous = []) {
         setupPlayersEl.innerHTML = "";
         for (let i = 0; i < count; i += 1) {
@@ -349,7 +212,7 @@
           row.className = "player-row";
           row.innerHTML = `<span class="player-number">${String(i + 1).padStart(2, "0")}</span>
             <input class="field player-name" maxlength="28" autocomplete="off" placeholder="Ник игрока ${i + 1}" value="${escapeHtml(player.name || "")}" aria-label="Ник игрока ${i + 1}">
-            <select class="role-select player-role" aria-label="Роль игрока ${i + 1}">${roleOptions(player.role || "none")}</select>`;
+            `;
           setupPlayersEl.append(row);
         }
       }
@@ -357,7 +220,7 @@
         return [...setupPlayersEl.querySelectorAll(".player-row")].map((row, index) => ({
           id: `p${index + 1}`,
           name: row.querySelector(".player-name").value.trim() || `Игрок ${index + 1}`,
-          role: row.querySelector(".player-role").value,
+          role: "none",
           alive: true
         }));
       }
@@ -406,11 +269,6 @@
       }
       function startGame() {
         const players = readSetupPlayers();
-        const duplicates = UNIQUE_ROLES.filter((role) => players.filter((player) => player.role === role).length > 1);
-        if (duplicates.length) {
-          showToast(`Уникальная роль назначена несколько раз: ${duplicates.map((role) => ROLE[role].name).join(", ")}.`);
-          return;
-        }
         state = {
           players,
           phase: "opening",
@@ -439,6 +297,7 @@
       function actorFor(step) {
         const actors = rolePlayers(step.key);
         if (step.key === "mafia") return rolePlayers("mafia").length + rolePlayers("don").length > 0;
+        if (step.key === "priestess" && state.priestessSaved) return false;
         return actors.length > 0;
       }
       function currentNightStep() { return NIGHT_STEPS[state.nightStep] || null; }
@@ -446,12 +305,33 @@
         const step = OPENING_STEPS[state.openingStep];
         if (!step) return `<div class="notice success">Знакомство завершено. Утром город знакомится друг с другом.</div>
           <div class="phase-actions"><button class="btn primary" data-action="opening-finish">Начать круг знакомства →</button></div>`;
+        const assigned = state.players.filter((player) => player.role !== "none").map((player) => player.id);
+        const available = alivePlayers().filter((player) => !assigned.includes(player.id));
+        const roleInput = step.key === "mafia"
+          ? `<div class="action-grid">
+              <div><label class="form-label" for="openingDon">Дон мафии</label>${selectMarkup("openingDon", { placeholder: "Выберите Дона" })}</div>
+              <div><label class="form-label">Мафия — отметьте всех</label>
+                <div class="roster">${available.map((player) => `<label class="roster-row"><span class="roster-name">${escapeHtml(player.name)}</span><input class="opening-mafia" type="checkbox" value="${escapeHtml(player.id)}" aria-label="Игрок ${escapeHtml(player.name)} — мафия"></label>`).join("")}</div>
+              </div>
+            </div>`
+          : `<div class="action-grid one"><div><label class="form-label" for="openingRolePlayer">${escapeHtml(step.title)}</label>${selectMarkup("openingRolePlayer", { exclude: assigned, placeholder: `Выберите игрока с ролью «${step.title}»` })}</div></div>`;
         return `<div class="stepper">${OPENING_STEPS.map((_, index) => `<span class="step ${index < state.openingStep ? "done" : index === state.openingStep ? "current" : ""}"></span>`).join("")}</div>
           <div class="action-panel">
-            <div class="action-title"><div><h3>Просыпается: ${escapeHtml(step[0])}</h3><p>${escapeHtml(step[1])}</p></div><span class="status-pill">${state.openingStep + 1} / ${OPENING_STEPS.length}</span></div>
-            <div class="feedback">Отметьте пробуждение и переходите к следующей роли.</div>
-            <div class="action-bottom"><span></span><button class="btn primary" data-action="opening-next">Далее →</button></div>
+            <div class="action-title"><div><h3>Просыпается: ${escapeHtml(step.title)}</h3><p>${escapeHtml(step.help)}</p></div><span class="status-pill">${state.openingStep + 1} / ${OPENING_STEPS.length}</span></div>
+            <p class="feedback">Укажите игрока, который показал эту карту. Если такой роли в партии нет — пропустите.</p>
+            ${roleInput}
+            <div class="phase-actions"><button class="btn primary" data-action="opening-next">Записать и продолжить →</button><button class="btn ghost" data-action="opening-skip">Такой роли нет</button></div>
           </div>`;
+      }
+      function finishOpeningStep() {
+        state.openingStep += 1;
+        if (state.openingStep >= OPENING_STEPS.length) {
+          state.players.filter((player) => player.role === "none").forEach((player) => { player.role = "civilian"; });
+          state.phase = "introMorning";
+          addLog("Роли записаны. Игроки без отмеченной специальной роли — мирные жители.");
+        }
+        save();
+        render();
       }
       function nextActorIndex(from) {
         for (let index = from; index < NIGHT_STEPS.length; index += 1) {
@@ -619,6 +499,7 @@
           recordAction(step.key, { first, second, sameTeam });
           addLog(`Сыщик сравнил ${label(first)} и ${label(second)}: ${sameTeam ? "одна команда" : "разные команды"}.`);
           showFeedback(sameTeam ? "Одна команда — 👍" : "Разные команды — 👎", sameTeam ? "good" : "bad");
+          showToast(sameTeam ? "Сыщик: игроки в одной команде." : "Сыщик: игроки в разных командах.");
         } else {
           if (!target) {
             showFeedback("Сначала выберите игрока.", "bad");
@@ -648,6 +529,7 @@
                   : "выбор записан";
           addLog(`${step.title}: ${label(target)} — ${result}.`);
           showFeedback(`${label(target)}: ${result}.`, step.key === "sheriff" && teamOf(playerById(target)) === "mafia" ? "good" : "");
+          showToast(`${step.title}: ${label(target)} — ${result}.`);
         }
         if (step.key === "priestess") state.previous.priestess = target;
         if (step.key === "capo") {
@@ -657,7 +539,7 @@
         const next = nextActorIndex(state.nightStep + 1);
         state.nightStep = next < 0 ? NIGHT_STEPS.length : next;
         save();
-        setTimeout(render, 500);
+        render();
       }
       function resolveNight() {
         const actions = state.night.actions;
@@ -841,11 +723,37 @@
       }
       function handleAction(action, button) {
         if (action === "opening-next") {
-          state.openingStep += 1;
-          if (state.openingStep >= OPENING_STEPS.length) state.phase = "introMorning";
-          addLog(`Ночь знакомства: ${OPENING_STEPS[Math.min(state.openingStep - 1, OPENING_STEPS.length - 1)][0]} проснулся(ась).`);
-          save(); render();
+          const step = OPENING_STEPS[state.openingStep];
+          if (step.key === "mafia") {
+            const don = $("#openingDon").value;
+            const mafia = [...document.querySelectorAll(".opening-mafia:checked")].map((input) => input.value);
+            if (!don && !mafia.length) {
+              showToast("Отметьте Дона или мафию либо пропустите этот этап.");
+              return;
+            }
+            if (don && mafia.includes(don)) {
+              showToast("Один игрок не может быть одновременно Доном и обычной мафией.");
+              return;
+            }
+            if (don) playerById(don).role = "don";
+            mafia.forEach((id) => { playerById(id).role = "mafia"; });
+            addLog(`Первая ночь: записаны роли Дона и мафии${don ? `; Дон — ${label(don)}` : ""}${mafia.length ? `; мафия — ${mafia.map(label).join(", ")}` : ""}.`);
+          } else {
+            const id = $("#openingRolePlayer").value;
+            if (!id) {
+              showToast("Выберите игрока с этой ролью или нажмите «Такой роли нет».");
+              return;
+            }
+            playerById(id).role = step.key;
+            addLog(`Первая ночь: ${label(id)} показал(а) карту «${ROLE[step.key].name}».`);
+          }
+          finishOpeningStep();
+        } else if (action === "opening-skip") {
+          const step = OPENING_STEPS[state.openingStep];
+          addLog(`Первая ночь: роль «${step.title}» пропущена — её нет в этой партии.`);
+          finishOpeningStep();
         } else if (action === "opening-finish") {
+          state.players.filter((player) => player.role === "none").forEach((player) => { player.role = "civilian"; });
           state.phase = "introMorning"; save(); render();
         } else if (action === "intro-discussion") {
           state.phase = "discussion"; addLog("Город начал круг знакомства."); save(); render();
