@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Помощник Ведущего Мафии</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --card-bg: #2a2a2a;
+      --accent: #d32f2f;
+      --text: #ffffff;
+      --subtext: #aaaaaa;
+      --border: #444444;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 12px;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    h2, h3 { text-align: center; margin: 8px 0; }
+    .screen { display: none; }
+    .active { display: block; }
+    .btn {
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .btn-secondary { background-color: #555; }
+    .player-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .player-card.dead { opacity: 0.4; text-decoration: line-through; }
+    select, input {
+      background: #333;
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 6px;
+      border-radius: 4px;
+    }
+    .foul-btn {
+      background: #e65100;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-left: 5px;
+    }
+    .log-box {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      height: 120px;
+      overflow-y: auto;
+      font-size: 12px;
+      font-family: monospace;
+      margin-top: 10px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #444;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ЭКРАН 1: НАСТРОЙКА ИГРЫ -->
+  <div id="setup-screen" class="screen active">
+    <h2>🎮 Настройка игры</h2>
+    <label>Количество игроков: </label>
+    <select id="player-count" onchange="generateSetup()">
+      <option value="6">6</option>
+      <option value="8">8</option>
+      <option value="10" selected>10</option>
+      <option value="12">12</option>
+    </select>
+    
+    <div id="roles-assign" style="margin-top:15px;"></div>
+    <button class="btn" onclick="startGame()">Начать игру</button>
+  </div>
+
+  <!-- ЭКРАН 2: ПАНЕЛЬ ВЕДУЩЕГО -->
+  <div id="game-screen" class="screen">
+    <h3 id="phase-title">🌙 Фаза: Ночь 1</h3>
+    <div id="action-panel" style="background:#333; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    
+    <h3>📋 Список игроков</h3>
+    <div id="players-list"></div>
+
+    <h3>📜 Лог событий</h3>
+    <div id="game-log" class="log-box"></div>
+    <button class="btn btn-secondary" onclick="nextPhase()">Перейти к следующей фазе</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.expand();
+
+    const ROLES = [
+      "Мирный житель", "Шериф", "Сыщик", "Ночная жрица",
+      "Мафия", "Дон Мафии", "Капо", "Киллер"
+    ];
+
+    let players = [];
+    let currentPhase = 'NIGHT'; // NIGHT или DAY
+    let dayCount = 1;
+    let nightActions = { shot: null, priestTarget: null, capoTarget: null };
+    let lastPriestTarget = null;
+    let lastCapoTarget = null;
+
+    function generateSetup() {
+      const count = parseInt(document.getElementById('player-count').value);
+      const container = document.getElementById('roles-assign');
+      container.innerHTML = '';
+      for (let i = 1; i <= count; i++) {
+        container.innerHTML += `
+          <div style="margin-bottom:5px;">
+            <span>Игрок ${i}: </span>
+            <select id="role-${i}">
+              ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+            </select>
+          </div>`;
+      }
+    }
+
+    function startGame() {
+      const count = parseInt(document.getElementById('player-count').value);
+      players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({
+          id: i,
+          role: document.getElementById(`role-${i}`).value,
+          alive: true,
+          fouls: 0,
+          selfSaved: false
+        });
+      }
+      document.getElementById('setup-screen').classList.remove('active');
+      document.getElementById('game-screen').classList.add('active');
+      log("🟢 Игра началась! Наступает Ночь 1.");
+      renderGame();
+    }
+
+    function renderGame() {
+      document.getElementById('phase-title').innerText = 
+        currentPhase === 'NIGHT' ? `🌙 Фаза: Ночь ${dayCount}` : `☀️ Фаза: День ${dayCount}`;
+      
+      renderActionPanel();
+      renderPlayers();
+    }
+
+    function renderPlayers() {
+      const list = document.getElementById('players-list');
+      list.innerHTML = '';
+      players.forEach(p => {
+        list.innerHTML += `
+          <div class="player-card ${p.alive ? '' : 'dead'}">
+            <div>
+              <strong>#${p.id}</strong> — <span class="badge">${p.role}</span>
+              ${p.fouls > 0 ? `<span style="color:yellow"> ⚠️${p.fouls}</span>` : ''}
+            </div>
+            <div>
+              ${p.alive ? `<button class="foul-btn" onclick="addFoul(${p.id})">+Фол</button>` : ''}
+              ${p.alive ? `<button class="foul-btn" style="background:#b71c1c" onclick="killPlayer(${p.id})">Убить</button>` : ''}
+            </div>
+          </div>`;
+      });
+    }
+
+    function renderActionPanel() {
+      const panel = document.getElementById('action-panel');
+      if (currentPhase === 'NIGHT') {
+        panel.innerHTML = `
+          <strong>Ночные действия:</strong><br>
+          <label>🎯 Выстрел Мафии/Дона: </label>
+          <select id="night-shot"><option value="">-- Промах --</option>${getAliveOptions()}</select><br><br>
+          <label>🛡️ Защита Жрицы: </label>
+          <select id="night-priest"><option value="">-- Никого --</option>${getAliveOptions()}</select><br><br>
+          <label>🔰 Иммунитет Капо: </label>
+          <select id="night-capo"><option value="">-- Никого --</option>${getAliveOptions()}</select>
+        `;
+      } else {
+        panel.innerHTML = `<strong>☀️ Дневное обсуждение и голосование.</strong><br>Отмечайте фолы или выбывание игроков вручную.`;
+      }
+    }
+
+    function getAliveOptions() {
+      return players.filter(p => p.alive).map(p => `<option value="${p.id}">Игрок ${p.id}</option>`).join('');
+    }
+
+    function addFoul(id) {
+      const p = players.find(x => x.id === id);
+      if (p) {
+        p.fouls++;
+        log(`⚠️ Игрок #${p.id} получил фол (${p.fouls}/4)`);
+        if (p.fouls >= 4) {
+          p.alive = false;
+          log(`❌ Игрок #${p.id} дисквалифицирован за 4 фола!`);
+        }
+        renderGame();
+      }
+    }
+
+    function killPlayer(id) {
+      const p = players.find(x => x.id === id);
+      if (p) {
+        p.alive = false;
+        log(`💀 Игрок #${p.id} (${p.role}) покинул игру.`);
+        renderGame();
+      }
+    }
+
+    function nextPhase() {
+      if (currentPhase === 'NIGHT') {
+        // Подсчет результатов ночи
+        const shotId = document.getElementById('night-shot').value;
+        const priestId = document.getElementById('night-priest').value;
+
+        if (shotId) {
+          if (shotId === priestId) {
+            log(`🛡️ В Игрока #${shotId} стреляли, но Ночная жрица его спасла!`);
+          } else {
+            const victim = players.find(p => p.id == shotId);
+            if (victim) {
+              victim.alive = false;
+              log(`💀 Ночью был убит Игрок #${victim.id} (${victim.role})`);
+            }
+          }
+        } else {
+          log(`🕊️ Ночью никто не погиб.`);
+        }
+
+        currentPhase = 'DAY';
+      } else {
+        currentPhase = 'NIGHT';
+        dayCount++;
+        log(`🌙 Наступает Ночь ${dayCount}`);
+      }
+      renderGame();
+    }
+
+    function log(msg) {
+      const box = document.getElementById('game-log');
+      box.innerHTML += `<div>${msg}</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    generateSetup();
+  </script>
+</body>
+</html>
