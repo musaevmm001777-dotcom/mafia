@@ -29,7 +29,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
 .phase-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px;}.notice{display:flex;gap:11px;align-items:start;margin-top:15px;padding:13px 14px;border:1px solid #6a583b;border-radius:13px;color:#e4d1a9;background:#302a20;font-size:13px;line-height:1.5;}.notice.success{border-color:#3b604b;color:#b5ddc1;background:#1e3027;}.notice.alert{border-color:#663e3e;color:#f1b6ae;background:#342323;}
 .two-column{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.side-stack{display:grid;gap:14px;}.side-card{padding:17px;}.side-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px;}
 .side-heading h3{margin:0;font-size:14px;}.counter{color:var(--muted);font-size:11px;}.roster{display:grid;gap:6px;max-height:350px;overflow:auto;}.roster-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 9px;border:1px solid transparent;border-radius:10px;background:#1a1c23;}
-.roster-row.dead{opacity:.45;}.roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}.roster-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;white-space:nowrap;}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+.roster-row.dead{opacity:.45;}.roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}.roster-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;white-space:nowrap;}.roster-player{display:grid;min-width:0;gap:3px;}.roster-foul{flex:0 0 auto;padding:5px 7px;border:1px solid #554a38;border-radius:8px;color:var(--gold-2);background:#29251f;font-size:10px;cursor:pointer;}.roster-foul:hover{border-color:var(--gold);background:#342e23;}.roster-foul:disabled{opacity:.45;cursor:not-allowed;}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
 .dead .dot{background:var(--red);}.log{display:grid;gap:9px;max-height:220px;overflow:auto;}.log-item{display:grid;grid-template-columns:10px 1fr;gap:8px;color:#c2c3c9;font-size:11px;line-height:1.45;}.log-item::before{width:6px;height:6px;margin-top:4px;border-radius:50%;background:var(--gold);content:"";}
 .log-time{display:block;margin-top:2px;color:#777e8b;font-size:10px;}.empty{color:var(--muted);font-size:12px;line-height:1.5;}.status-pill{display:inline-flex;padding:5px 8px;border-radius:99px;color:var(--muted);background:#292c34;font-size:10px;}.timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;letter-spacing:.06em;}
 .timer-controls{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}.speech-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0;}.speech-controls .timer{min-width:74px;padding:0 3px;}.auto-start-option{display:flex;align-items:center;gap:7px;margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.4;cursor:pointer;}.auto-start-option input{accent-color:var(--gold);}.modal-backdrop{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:#08090dc9;}.modal-backdrop.open{display:flex;}.modal{width:min(500px,100%);max-height:85vh;overflow:auto;padding:22px;border:1px solid var(--line);border-radius:18px;background:#22252d;box-shadow:0 20px 80px #0008;}
@@ -480,7 +480,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         return `<div class="notice">${state.round === 0 ? "Круг знакомства: каждому игроку даётся по 30 секунд." : `Обсуждение раунда ${state.round}: по 30 секунд на игрока. При фоле добавляется ещё 30 секунд.`}</div>
           <div class="action-panel">
             <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Выступил игрок ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div>${speechTimerControls(true)}</div>
-            <p class="feedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Нажмите «Старт», когда игрок начнёт говорить. Фол добавляет 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
+            <p class="feedback" id="foulFeedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Нажмите «Старт», когда игрок начнёт говорить. Фол добавляет 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
             <div class="phase-actions"><button class="btn primary" data-action="next-speaker">Игрок закончил — выбрать следующего</button><button class="btn ghost" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство" : "Завершить обсуждение"}</button></div>
           </div>`;
       }
@@ -554,8 +554,9 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         const alive = alivePlayers().length;
         $("#aliveCount").textContent = `${alive} / ${state.players.length} в игре`;
         list.innerHTML = state.players.map((player) => `<div class="roster-row ${player.alive ? "" : "dead"}">
-          <span class="roster-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>
-          <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}${state.speaking?.fouls?.[player.id] ? ` · ⚑ ${state.speaking.fouls[player.id]}` : ""}</span>
+          <span class="roster-player"><span class="roster-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</span>
+          <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}${state.speaking?.fouls?.[player.id] ? ` · ⚑ ${state.speaking.fouls[player.id]}` : ""}</span></span>
+          <button class="roster-foul" type="button" data-player-foul="${escapeHtml(player.id)}" aria-label="Выдать фол игроку ${escapeHtml(player.name)}" title="Выдать фол без добавления времени" ${state.phase === "ended" ? "disabled" : ""}>⚑ Фол</button>
         </div>`).join("");
         const totalFouls = Object.values(state.speaking?.fouls || {}).reduce((sum, count) => sum + count, 0);
         $("#foulSummary").textContent = `Фолы за игру: ${totalFouls}`;
@@ -896,16 +897,28 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         if (state?.phase !== "discussion") return;
         const playerId = state.speaking?.currentId;
         if (!playerId) return;
+        recordFoul(playerId, true);
+      }
+      function addPlayerFoul(playerId) {
+        if (!state || state.phase === "ended" || !playerById(playerId)) return;
+        recordFoul(playerId, false);
+      }
+      function recordFoul(playerId, addTime) {
         state.speaking.fouls[playerId] = (state.speaking.fouls[playerId] || 0) + 1;
-        timerSeconds += 30;
-        state.speaking.remaining = timerSeconds;
-        addLog(`Фол игроку ${label(playerId)}: +30 секунд. Всего фолов игрока: ${state.speaking.fouls[playerId]}.`);
+        if (addTime) {
+          timerSeconds += 30;
+          state.speaking.remaining = timerSeconds;
+        }
+        addLog(`Фол игроку ${label(playerId)}${addTime ? ": +30 секунд." : " (без добавления времени)."} Всего фолов игрока: ${state.speaking.fouls[playerId]}.`);
         save();
         renderRoster();
         updateTimerDisplay();
         syncTimerControls();
-        const counter = $("#phaseContent .feedback");
-        if (counter) counter.textContent = `Добавлено 30 секунд. Фолы игрока: ${state.speaking.fouls[playerId]}. Всего за игру: ${Object.values(state.speaking.fouls).reduce((sum, count) => sum + count, 0)}. Игрок автоматически не выбывает.`;
+        renderLog();
+        const totalFouls = Object.values(state.speaking.fouls).reduce((sum, count) => sum + count, 0);
+        const counter = $("#foulFeedback");
+        if (counter && addTime) counter.textContent = `Добавлено 30 секунд. Фолы игрока ${label(playerId)}: ${state.speaking.fouls[playerId]}. Всего за игру: ${totalFouls}. Игрок автоматически не выбывает.`;
+        showToast(`${label(playerId)} получил фол. Всего фолов: ${state.speaking.fouls[playerId]}.${addTime ? " Добавлено 30 секунд." : ""}`);
       }
       function exportGame() {
         const data = {
@@ -1059,6 +1072,12 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         save();
       });
       document.addEventListener("click", (event) => {
+        const playerFoulButton = event.target.closest("[data-player-foul]");
+        if (playerFoulButton) {
+          const playerId = playerFoulButton.dataset.playerFoul;
+          withUndo(() => addPlayerFoul(playerId));
+          return;
+        }
         const timerControl = event.target.closest("[data-timer-control]");
         if (timerControl) {
           if (timerControl.dataset.timerControl === "toggle") toggleTimer();
