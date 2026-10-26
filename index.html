@@ -32,7 +32,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
 .roster-row.dead{opacity:.45;}.roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}.roster-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;white-space:nowrap;}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
 .dead .dot{background:var(--red);}.log{display:grid;gap:9px;max-height:220px;overflow:auto;}.log-item{display:grid;grid-template-columns:10px 1fr;gap:8px;color:#c2c3c9;font-size:11px;line-height:1.45;}.log-item::before{width:6px;height:6px;margin-top:4px;border-radius:50%;background:var(--gold);content:"";}
 .log-time{display:block;margin-top:2px;color:#777e8b;font-size:10px;}.empty{color:var(--muted);font-size:12px;line-height:1.5;}.status-pill{display:inline-flex;padding:5px 8px;border-radius:99px;color:var(--muted);background:#292c34;font-size:10px;}.timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;letter-spacing:.06em;}
-.timer-controls{display:flex;gap:7px;margin-top:9px;}.modal-backdrop{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:#08090dc9;}.modal-backdrop.open{display:flex;}.modal{width:min(500px,100%);max-height:85vh;overflow:auto;padding:22px;border:1px solid var(--line);border-radius:18px;background:#22252d;box-shadow:0 20px 80px #0008;}
+.timer-controls{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}.speech-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0;}.speech-controls .timer{min-width:74px;padding:0 3px;}.auto-start-option{display:flex;align-items:center;gap:7px;margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.4;cursor:pointer;}.auto-start-option input{accent-color:var(--gold);}.modal-backdrop{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:#08090dc9;}.modal-backdrop.open{display:flex;}.modal{width:min(500px,100%);max-height:85vh;overflow:auto;padding:22px;border:1px solid var(--line);border-radius:18px;background:#22252d;box-shadow:0 20px 80px #0008;}
 .modal h2{margin-bottom:7px;font-size:24px;}.modal p{color:var(--muted);line-height:1.55;}.modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}.role-guide{display:grid;gap:8px;margin-top:16px;}
 .role-guide-row{padding:11px;border:1px solid var(--line);border-radius:11px;background:#1a1c23;}.role-guide-row strong{color:var(--gold-2);font-size:13px;}.role-guide-row p{margin:4px 0 0;font-size:12px;}.toast{position:fixed;z-index:30;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:calc(100% - 36px);padding:12px 15px;border:1px solid var(--line);border-radius:12px;color:var(--text);background:#30343e;box-shadow:0 8px 30px #0005;opacity:0;transform:translateY(12px);transition:.2s;pointer-events:none;font-size:13px;}
 .toast.show{opacity:1;transform:translateY(0);}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}@media (max-width:780px){.app{padding:14px 14px calc(34px + env(safe-area-inset-bottom));}.setup-layout,.game-grid{grid-template-columns:1fr;}
@@ -123,10 +123,11 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
               <div class="side-heading"><h3>Таймер слова</h3><span class="counter">30 секунд</span></div>
               <div class="timer" id="timerDisplay">00:30</div>
               <div class="timer-controls">
-                <button class="small-btn" id="timerToggle">▶ Старт</button>
-                <button class="small-btn" id="timerReset">↺ 30 сек</button>
-                <button class="small-btn" id="foulButton" disabled>⚑ Фол +30</button>
+                <button class="small-btn timer-toggle-control" data-timer-control="toggle" id="timerToggle">▶ Старт</button>
+                <button class="small-btn" data-timer-control="reset" id="timerReset">↺ 30 сек</button>
+                <button class="small-btn" data-timer-control="foul" id="foulButton" disabled>⚑ Фол +30</button>
               </div>
+              <label class="auto-start-option"><input type="checkbox" id="autoStartTimer"> Автостарт при выборе говорящего</label>
               <p class="counter" id="foulSummary" style="margin:10px 0 0">Фолы за игру: 0</p>
               <p class="counter" style="margin:4px 0 0">Счёт ведётся отдельно по игрокам. Автоматического выбывания нет.</p>
             </section>
@@ -175,8 +176,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       ];
       const NIGHT_STEPS = [
         { key: "mafia", title: "Мафия и Дон", help: "Команда выбирает одного игрока для ночного убийства." },
-        { key: "don", title: "Дон ищет Шерифа", help: "Выберите игрока — приложение покажет, является ли он Шерифом." },
-        { key: "sheriff", title: "Шериф проверяет", help: "Если цель принадлежит мафии, Шериф устраняет её этой ночью." },
+        { key: "don", title: "Дон ищет Шерифа", help: "Выберите игрока. Если это Шериф, Дон решит, убивать ли его этой ночью." },
+        { key: "sheriff", title: "Шериф проверяет", help: "Шериф узнаёт, мафия ли выбранный игрок. Проверка сама по себе никого не убивает." },
         { key: "killer", title: "Киллер выбирает цель", help: "Киллер действует самостоятельно и выбирает, кого убить." },
         { key: "detective", title: "Сыщик сравнивает", help: "Выберите двух игроков — ведущий увидит, одна ли у них команда." },
         { key: "priestess", title: "Жрица лечит", help: "Выберите игрока для защиты от любого ночного убийства." },
@@ -186,8 +187,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         civilian: "Играет за мирный город. Цель — вычислить и изгнать мафию и Киллера.",
         mafia: "Играет за мафию. Вместе с Доном выбирает цель ночного убийства.",
         don: "Играет за мафию. Ночью ищет Шерифа; решающий голос мафии остаётся за Доном.",
-        sheriff: "Играет за мирный город. Проверяет игрока; найденный мафиози выбывает этой ночью.",
-        killer: "Играет сам за себя. Выбирает ночную цель; победа возможна, если после дневного голосования за столом остаются Киллер и два мирных жителя.",
+        sheriff: "Играет за мирный город. Проверяет, является ли выбранный игрок мафией; проверка не убивает. Киллера видит как мирного, пока в игре есть мафия, и как тёмного, когда мафии не осталось.",
+        killer: "Играет сам за себя. Пока в игре есть мафия, проверки показывают Киллера мирным; после выбывания мафии — тёмным. Победа возможна после голосования, если остаются Киллер и два мирных жителя, а мафии уже нет.",
         priestess: "Играет за мирный город. Один раз за игру спасает выбранного игрока от ночного убийства. Нельзя выбирать одну цель две ночи подряд.",
         detective: "Играет за мирный город. Сравнивает двух игроков: приложение сообщает, играют ли они за одну команду.",
         capo: "Играет за мафию. Каждую ночь выбирает иммунитет от голосования на следующий день; нельзя защищать себя или одну цель две ночи подряд."
@@ -197,10 +198,17 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       let timerHandle = null;
       let toastHandle = null;
       let undoStack = [];
+      let autoStartTimer = false;
 
       const $ = (selector) => document.querySelector(selector);
       const setupPlayersEl = $("#setupPlayers");
       const phaseContent = $("#phaseContent");
+      try {
+        autoStartTimer = localStorage.getItem("mafia-host-auto-start-timer") === "true";
+      } catch (error) {
+        console.warn("Не удалось прочитать настройку автозапуска таймера:", error);
+      }
+      $("#autoStartTimer").checked = autoStartTimer;
 
       function escapeHtml(value) {
         return String(value).replace(/[&<>"']/g, (char) => ({
@@ -307,6 +315,15 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       function playerById(id) { return state.players.find((player) => player.id === id); }
       function rolePlayers(role) { return alivePlayers().filter((player) => player.role === role); }
       function teamOf(player) { return ROLE[player.role]?.team || "unknown"; }
+      function aliveMafiaCount() { return alivePlayers().filter((player) => teamOf(player) === "mafia").length; }
+      function checkedTeam(player) {
+        if (player.role === "killer") return aliveMafiaCount() > 0 ? "city" : "killer";
+        return teamOf(player);
+      }
+      function appearsDarkToChecks(player) {
+        const team = checkedTeam(player);
+        return team === "mafia" || team === "killer";
+      }
       function label(id) {
         const player = playerById(id);
         return player ? player.name : "неизвестный игрок";
@@ -396,7 +413,10 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       function actionInput(step) {
         const actions = state.night.actions;
         if (step.key === "mafia") return `<div class="action-grid one"><div><label class="form-label" for="target">Цель мафии</label>${selectMarkup("target", { exclude: alivePlayers().filter((p) => teamOf(p) === "mafia").map((p) => p.id) })}</div></div>`;
-        if (step.key === "don") return `<div class="action-grid one"><div><label class="form-label" for="target">Кого проверяет Дон</label>${selectMarkup("target")}</div></div>`;
+        if (step.key === "don") return `<div class="action-grid">
+          <div><label class="form-label" for="target">Кого проверяет Дон</label>${selectMarkup("target")}</div>
+          <div id="donDecisionWrap" hidden><label class="form-label" for="donKillSheriff">Дон нашёл Шерифа — что делать?</label><select class="field" id="donKillSheriff"><option value="no">Не убивать</option><option value="yes">Убить этой ночью</option></select></div>
+        </div>`;
         if (step.key === "sheriff") return `<div class="action-grid one"><div><label class="form-label" for="target">Кого проверяет Шериф</label>${selectMarkup("target")}</div></div>`;
         if (step.key === "killer") return `<div class="action-grid one"><div><label class="form-label" for="target">Цель Киллера</label>${selectMarkup("target", { exclude: rolePlayers("killer").map((p) => p.id) })}</div></div>`;
         if (step.key === "detective") return `<div class="action-grid">
@@ -459,7 +479,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         const totalFouls = Object.values(state.speaking.fouls || {}).reduce((sum, count) => sum + count, 0);
         return `<div class="notice">${state.round === 0 ? "Круг знакомства: каждому игроку даётся по 30 секунд." : `Обсуждение раунда ${state.round}: по 30 секунд на игрока. При фоле добавляется ещё 30 секунд.`}</div>
           <div class="action-panel">
-            <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Выступил игрок ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Выступил игрок ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div>${speechTimerControls(true)}</div>
             <p class="feedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Нажмите «Старт», когда игрок начнёт говорить. Фол добавляет 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
             <div class="phase-actions"><button class="btn primary" data-action="next-speaker">Игрок закончил — выбрать следующего</button><button class="btn ghost" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство" : "Завершить обсуждение"}</button></div>
           </div>`;
@@ -477,9 +497,16 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             : `<div class="notice success">Последние слова завершены.</div><div class="phase-actions"><button class="btn primary" data-action="start-discussion">Начать обсуждение →</button></div>`}`;
         return `<div class="notice alert">После ночного выбывания каждому погибшему даётся отдельные 30 секунд на последнее слово.</div>
           <div class="action-panel">
-            <div class="action-title"><div><h3>Последнее слово: ${escapeHtml(current.name)}</h3><p>Выбывших уже выслушано: ${speakers.length} из ${(state.lastNightDeaths || []).length}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <div class="action-title"><div><h3>Последнее слово: ${escapeHtml(current.name)}</h3><p>Выбывших уже выслушано: ${speakers.length} из ${(state.lastNightDeaths || []).length}</p></div>${speechTimerControls(false)}</div>
             <div class="phase-actions"><button class="btn primary" data-action="next-last-word">Игрок закончил — выбрать следующего</button><button class="btn ghost" data-action="start-discussion">Закончить последние слова</button></div>
           </div>`;
+      }
+      function speechTimerControls(allowFoul) {
+        return `<div class="speech-controls"><span class="timer">${formatTime(timerSeconds)}</span>
+          <button class="btn primary timer-toggle-control" data-timer-control="toggle">${timerHandle ? "Ⅱ Пауза" : "▶ Старт"}</button>
+          <button class="small-btn" data-timer-control="reset">↺ 30 сек</button>
+          ${allowFoul ? `<button class="small-btn" data-timer-control="foul">⚑ Фол +30</button>` : ""}
+        </div>`;
       }
       function playerChoiceMarkup(id, players) {
         return `<select id="${id}" class="field"><option value="">Выберите игрока</option>${players.map((player) =>
@@ -630,6 +657,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         addLog(`${lastWord ? "Последнее слово" : "Слово"}: ведущий выбрал игрока ${label(id)}.`);
         save();
         render();
+        if (autoStartTimer) toggleTimer();
       }
       function finishDiscussion() {
         stopTimer();
@@ -658,7 +686,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             showFeedback("Выберите двух разных игроков.", "bad");
             return;
           }
-          const sameTeam = teamOf(playerById(first)) === teamOf(playerById(second));
+          const sameTeam = checkedTeam(playerById(first)) === checkedTeam(playerById(second));
           recordAction(step.key, { first, second, sameTeam });
           addLog(`Сыщик сравнил ${label(first)} и ${label(second)}: ${sameTeam ? "одна команда" : "разные команды"}.`);
           showFeedback(sameTeam ? "Одна команда — 👍" : "Разные команды — 👎", sameTeam ? "good" : "bad");
@@ -680,19 +708,29 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             showFeedback("Капо нельзя защищать одну цель две ночи подряд.", "bad");
             return;
           }
-          recordAction(step.key, target);
-          const result = step.key === "don"
-            ? (playerById(target).role === "sheriff" ? "это Шериф" : "это не Шериф")
-            : step.key === "sheriff"
-              ? (teamOf(playerById(target)) === "mafia" ? "мафиози найден — цель выбывает" : "цель не из мафии")
+          if (step.key === "don") {
+            const isSheriff = playerById(target).role === "sheriff";
+            const killSheriff = $("#donKillSheriff").value === "yes";
+            recordAction(step.key, { target, killSheriff });
+            const result = isSheriff
+              ? `это Шериф${killSheriff ? ", Дон решил убить этой ночью" : ", Дон решил не убивать"}`
+              : "это не Шериф";
+            addLog(`${step.title}: ${label(target)} — ${result}.`);
+            showFeedback(`${label(target)}: ${result}.`);
+            showToast(`${step.title}: ${label(target)} — ${result}.`);
+          } else {
+            recordAction(step.key, target);
+            const result = step.key === "sheriff"
+              ? (appearsDarkToChecks(playerById(target)) ? "тёмный игрок найден; проверка не убивает" : "игрок проверен как мирный")
               : step.key === "priestess"
                 ? "цель защищена от ночных убийств"
                 : step.key === "capo"
                   ? "цель защищена от дневного голосования"
                   : "выбор записан";
-          addLog(`${step.title}: ${label(target)} — ${result}.`);
-          showFeedback(`${label(target)}: ${result}.`, step.key === "sheriff" && teamOf(playerById(target)) === "mafia" ? "good" : "");
-          showToast(`${step.title}: ${label(target)} — ${result}.`);
+            addLog(`${step.title}: ${label(target)} — ${result}.`);
+            showFeedback(`${label(target)}: ${result}.`, step.key === "sheriff" && appearsDarkToChecks(playerById(target)) ? "good" : "");
+            showToast(`${step.title}: ${label(target)} — ${result}.`);
+          }
         }
         if (step.key === "priestess") state.previous.priestess = target;
         if (step.key === "capo") {
@@ -709,7 +747,12 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         const attempted = new Set();
         if (actions.mafia) attempted.add(actions.mafia);
         if (actions.killer) attempted.add(actions.killer);
-        if (actions.sheriff && teamOf(playerById(actions.sheriff)) === "mafia") attempted.add(actions.sheriff);
+        const donTarget = typeof actions.don === "string" ? actions.don : actions.don?.target;
+        const donChoosesKill = typeof actions.don === "object" && actions.don?.killSheriff;
+        if (donTarget && donChoosesKill && playerById(donTarget)?.role === "sheriff") {
+          attempted.add(donTarget);
+          addLog(`Дон убивает Шерифа: ${label(donTarget)} выбран целью этой ночью.`);
+        }
         const protectedTarget = actions.priestess || null;
         state.lastNightSaved = null;
         if (protectedTarget && !state.priestessSaved && attempted.has(protectedTarget)) {
@@ -739,7 +782,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         const killer = alive.filter((player) => teamOf(player) === "killer").length;
         if (mafia === 0 && killer === 0) return "city";
         if (city === 0 && killer === 0 && mafia > 0) return "mafia";
-        if (stage === "vote" && killer > 0 && city === 2) return "killer";
+        if (stage === "vote" && mafia === 0 && killer > 0 && city === 2) return "killer";
         return null;
       }
       function resolveVote() {
@@ -808,11 +851,16 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function syncTimerControls() {
         const active = state && ["discussion", "lastWords"].includes(state.phase);
-        const inDiscussion = state?.phase === "discussion" && state.speaking?.players?.[state.speaking.index];
-        $("#timerToggle").disabled = !active || !state.speaking?.players?.[state.speaking.index];
-        $("#timerReset").disabled = !active || !state.speaking?.players?.[state.speaking.index];
+        const hasSpeaker = Boolean(state?.speaking?.currentId);
+        const inDiscussion = state?.phase === "discussion" && hasSpeaker;
+        document.querySelectorAll(".timer-toggle-control").forEach((button) => {
+          button.disabled = !active || !hasSpeaker;
+          button.textContent = timerHandle ? "Ⅱ Пауза" : "▶ Старт";
+        });
+        $("#timerReset").disabled = !active || !hasSpeaker;
         $("#foulButton").disabled = !inDiscussion;
-        $("#timerToggle").textContent = timerHandle ? "Ⅱ Пауза" : "▶ Старт";
+        document.querySelectorAll('[data-timer-control="reset"]').forEach((button) => { button.disabled = !active || !hasSpeaker; });
+        document.querySelectorAll('[data-timer-control="foul"]').forEach((button) => { button.disabled = !inDiscussion; });
       }
       function toggleTimer() {
         if (timerHandle) {
@@ -820,10 +868,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           syncTimerControls();
           return;
         }
-        if (!state || !["discussion", "lastWords"].includes(state.phase) ||
-            !state.speaking?.players?.[state.speaking.index]) return;
+        if (!state || !["discussion", "lastWords"].includes(state.phase) || !state.speaking?.currentId) return;
         if (timerSeconds <= 0) timerSeconds = 30;
-        $("#timerToggle").textContent = "Ⅱ Пауза";
         timerHandle = setInterval(() => {
           timerSeconds = Math.max(0, timerSeconds - 1);
           state.speaking.remaining = timerSeconds;
@@ -836,6 +882,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
           }
         }, 1000);
+        syncTimerControls();
       }
       function resetTimer() {
         stopTimer();
@@ -847,7 +894,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function addFoulTime() {
         if (state?.phase !== "discussion") return;
-        const playerId = state.speaking?.players?.[state.speaking.index];
+        const playerId = state.speaking?.currentId;
         if (!playerId) return;
         state.speaking.fouls[playerId] = (state.speaking.fouls[playerId] || 0) + 1;
         timerSeconds += 30;
@@ -997,20 +1044,38 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       });
       $("#exportButton").addEventListener("click", exportGame);
       $("#undoButton").addEventListener("click", undoStep);
-      $("#timerToggle").addEventListener("click", toggleTimer);
-      $("#timerReset").addEventListener("click", resetTimer);
-      $("#foulButton").addEventListener("click", () => withUndo(addFoulTime));
+      $("#autoStartTimer").addEventListener("change", (event) => {
+        autoStartTimer = event.target.checked;
+        try {
+          localStorage.setItem("mafia-host-auto-start-timer", String(autoStartTimer));
+        } catch (error) {
+          console.error("Не удалось сохранить настройку автозапуска таймера:", error);
+          showToast("Не удалось сохранить настройку автозапуска.");
+        }
+      });
       $("#hostNote").addEventListener("input", (event) => {
         if (!state) return;
         state.note = event.target.value;
         save();
       });
       document.addEventListener("click", (event) => {
+        const timerControl = event.target.closest("[data-timer-control]");
+        if (timerControl) {
+          if (timerControl.dataset.timerControl === "toggle") toggleTimer();
+          else if (timerControl.dataset.timerControl === "reset") resetTimer();
+          else if (timerControl.dataset.timerControl === "foul") withUndo(addFoulTime);
+          return;
+        }
         const button = event.target.closest("[data-action]");
         if (button) withUndo(() => handleAction(button.dataset.action, button));
         if (event.target === $("#modalBackdrop")) $("#modalBackdrop").classList.remove("open");
       });
       document.addEventListener("change", (event) => {
+        if (event.target.id === "target" && currentNightStep()?.key === "don") {
+          const selected = playerById(event.target.value);
+          const decision = $("#donDecisionWrap");
+          if (decision) decision.hidden = selected?.role !== "sheriff";
+        }
         if (event.target.id === "voteCount" || event.target.id === "voterCount") {
           const votes = Number($("#voteCount")?.value || 0);
           const voters = Number($("#voterCount")?.value || 0);
