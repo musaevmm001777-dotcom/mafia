@@ -40,7 +40,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
 .brand h1{font-size:18px;}.brand p{font-size:10px;}.brand-mark{width:38px;height:38px;}.icon-btn{width:38px;height:38px;}
 .setup-card.card-pad,.phase-card{padding:18px;}.player-row{grid-template-columns:25px minmax(0,1fr);gap:6px;}.field,.role-select{height:41px;padding:0 9px;font-size:12px;}.side-stack{grid-template-columns:1fr;}
 .action-grid,.two-column{grid-template-columns:1fr;}.phase-actions .btn{flex:1 1 100%;}.setup-footer{align-items:stretch;flex-direction:column;}.setup-footer .btn{width:100%;}
-.privacy-note{text-align:center;}.phase-top{flex-direction:column;}}
+.privacy-note{text-align:center;}.phase-top{flex-direction:column;}.topbar{flex-wrap:wrap;}.top-actions{margin-left:auto;}.new-game-button{min-height:38px;padding:0 10px;font-size:12px;}}
 </style>
 </head>
 <body>
@@ -51,6 +51,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         <div><h1>Пульт ведущего</h1><p>МАФИЯ · помощник игры</p></div>
       </div>
       <div class="top-actions">
+        <button class="btn danger new-game-button" id="newGameButton" disabled>Новая игра</button>
         <button class="icon-btn" id="undoButton" aria-label="Назад на шаг" title="Назад на шаг" disabled>↶</button>
         <button class="icon-btn" id="guideButton" aria-label="Правила ролей" title="Правила ролей">?</button>
         <button class="icon-btn" id="saveButton" aria-label="Сохранить игру" title="Сохранить игру">↧</button>
@@ -126,7 +127,8 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
                 <button class="small-btn" id="timerReset">↺ 30 сек</button>
                 <button class="small-btn" id="foulButton" disabled>⚑ Фол +30</button>
               </div>
-              <p class="counter" id="foulSummary" style="margin:10px 0 0">Фолы: 0</p>
+              <p class="counter" id="foulSummary" style="margin:10px 0 0">Фолы за игру: 0</p>
+              <p class="counter" style="margin:4px 0 0">Счёт ведётся отдельно по игрокам. Автоматического выбывания нет.</p>
             </section>
             <section class="card side-card">
               <div class="side-heading"><h3>Журнал игры</h3><button class="small-btn" id="exportButton">Экспорт</button></div>
@@ -529,7 +531,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           <span class="roster-meta"><i class="dot"></i>${escapeHtml(ROLE[player.role]?.name || "Без роли")}${state.speaking?.fouls?.[player.id] ? ` · ⚑ ${state.speaking.fouls[player.id]}` : ""}</span>
         </div>`).join("");
         const totalFouls = Object.values(state.speaking?.fouls || {}).reduce((sum, count) => sum + count, 0);
-        $("#foulSummary").textContent = `Фолы: ${totalFouls}`;
+        $("#foulSummary").textContent = `Фолы за игру: ${totalFouls}`;
       }
       function renderLog() {
         const log = $("#eventLog");
@@ -543,8 +545,10 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         if (!state) {
           $("#setupView").classList.add("active");
           $("#gameView").classList.remove("active");
+          $("#newGameButton").disabled = true;
           return;
         }
+        $("#newGameButton").disabled = false;
         $("#setupView").classList.remove("active");
         $("#gameView").classList.add("active");
         $("#hostNote").value = state.note || "";
@@ -854,7 +858,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         updateTimerDisplay();
         syncTimerControls();
         const counter = $("#phaseContent .feedback");
-        if (counter) counter.textContent = `Добавлено 30 секунд. Фолы игрока: ${state.speaking.fouls[playerId]}.`;
+        if (counter) counter.textContent = `Добавлено 30 секунд. Фолы игрока: ${state.speaking.fouls[playerId]}. Всего за игру: ${Object.values(state.speaking.fouls).reduce((sum, count) => sum + count, 0)}. Игрок автоматически не выбывает.`;
       }
       function exportGame() {
         const data = {
@@ -862,6 +866,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           players: state.players.map(({ id, name, role, alive }) => ({ id, name, role: ROLE[role]?.name || role, alive })),
           round: state.round,
           winner: state.winner,
+          fouls: state.speaking?.fouls || {},
           events: state.log,
           note: state.note
         };
@@ -903,6 +908,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             const previousState = captureState();
             const previousPlayers = state.players.map((player) => ({ ...player }));
             const previousTimer = timerSeconds;
+            stopTimer();
             undoStack = [];
             state = null;
             recordUndo(previousState, previousTimer, previousPlayers);
@@ -910,6 +916,11 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
             $("#gameView").classList.remove("active");
             $("#countValue").textContent = "6";
             playerRows(6, []);
+            timerSeconds = 30;
+            updateTimerDisplay();
+            syncTimerControls();
+            syncUndoButton();
+            $("#newGameButton").disabled = true;
           } }
         ]);
       }
@@ -977,6 +988,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         playerRows(count, current);
       });
       $("#startButton").addEventListener("click", startGame);
+      $("#newGameButton").addEventListener("click", confirmNewGame);
       $("#guideButton").addEventListener("click", showGuide);
       $("#saveButton").addEventListener("click", () => {
         if (state) { save(); showToast("Игра сохранена на этом устройстве."); }
