@@ -446,29 +446,43 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       }
       function discussionPanel() {
         const speakers = state.speaking?.players || [];
-        const currentId = speakers[state.speaking?.index || 0];
+        const currentId = state.speaking?.currentId;
         const current = playerById(currentId);
-        if (!current) return `<div class="notice success">Все игроки высказались.</div>
-          <div class="phase-actions"><button class="btn primary" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство → Ночь 1" : "Перейти к голосованию →"}</button></div>`;
+        const candidates = alivePlayers().filter((player) => !speakers.includes(player.id));
+        if (!current) return `<div class="notice">${speakers.length ? "Выберите следующего игрока, который будет говорить." : "Выберите игрока, который начнёт круг."} Очередность определяет ведущий.</div>
+          ${candidates.length ? `<div class="action-grid one"><div><label class="form-label" for="speakerChoice">Следующий игрок</label>${playerChoiceMarkup("speakerChoice", candidates)}</div></div>
+            <div class="phase-actions"><button class="btn primary" data-action="select-speaker">Начать его слово →</button>
+            ${speakers.length ? `<button class="btn ghost" data-action="finish-discussion">${state.round === 0 ? "Закончить знакомство" : "Завершить обсуждение"}</button>` : ""}</div>`
+            : `<div class="notice success">Все игроки высказались.</div><div class="phase-actions"><button class="btn primary" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство → Ночь 1" : "Перейти к голосованию →"}</button></div>`}`;
         const totalFouls = Object.values(state.speaking.fouls || {}).reduce((sum, count) => sum + count, 0);
         return `<div class="notice">${state.round === 0 ? "Круг знакомства: каждому игроку даётся по 30 секунд." : `Обсуждение раунда ${state.round}: по 30 секунд на игрока. При фоле добавляется ещё 30 секунд.`}</div>
           <div class="action-panel">
-            <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Игрок ${state.speaking.index + 1} из ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
-            <p class="feedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Таймер запущен автоматически. Фол добавляет игроку 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
-            <div class="phase-actions"><button class="btn primary" data-action="next-speaker">${state.speaking.index + 1 === speakers.length ? "Завершить выступления →" : "Следующий игрок →"}</button></div>
+            <div class="action-title"><div><h3>Слово: ${escapeHtml(current.name)}</h3><p>Выступил игрок ${speakers.length} · Фолы игрока: ${state.speaking.fouls[currentId] || 0}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <p class="feedback">${totalFouls ? `За игру уже зафиксировано фолов: ${totalFouls}.` : "Нажмите «Старт», когда игрок начнёт говорить. Фол добавляет 30 секунд."} Фолы только считаются: автоматически никто не выбывает.</p>
+            <div class="phase-actions"><button class="btn primary" data-action="next-speaker">Игрок закончил — выбрать следующего</button><button class="btn ghost" data-action="finish-discussion">${state.round === 0 ? "Завершить знакомство" : "Завершить обсуждение"}</button></div>
           </div>`;
       }
       function lastWordsPanel() {
         const speakers = state.speaking?.players || [];
-        const currentId = speakers[state.speaking?.index || 0];
+        const currentId = state.speaking?.currentId;
         const current = playerById(currentId);
-        if (!current) return `<div class="notice success">Последние слова завершены.</div>
-          <div class="phase-actions"><button class="btn primary" data-action="start-discussion">Начать обсуждение →</button></div>`;
+        const candidates = speakers.length
+          ? (state.lastNightDeaths || []).filter((id) => !speakers.includes(id)).map(playerById).filter(Boolean)
+          : (state.lastNightDeaths || []).map(playerById).filter(Boolean);
+        if (!current) return `<div class="notice">${speakers.length ? "Выберите следующего выбывшего, которому дать последнее слово." : "Выберите, кто из выбывших скажет последнее слово первым."} Порядок выбирает ведущий.</div>
+          ${candidates.length ? `<div class="action-grid one"><div><label class="form-label" for="speakerChoice">Игрок для последнего слова</label>${playerChoiceMarkup("speakerChoice", candidates)}</div></div>
+            <div class="phase-actions"><button class="btn primary" data-action="select-last-word">Дать последнее слово →</button>${speakers.length ? `<button class="btn ghost" data-action="start-discussion">Пропустить оставшиеся → к обсуждению</button>` : ""}</div>`
+            : `<div class="notice success">Последние слова завершены.</div><div class="phase-actions"><button class="btn primary" data-action="start-discussion">Начать обсуждение →</button></div>`}`;
         return `<div class="notice alert">После ночного выбывания каждому погибшему даётся отдельные 30 секунд на последнее слово.</div>
           <div class="action-panel">
-            <div class="action-title"><div><h3>Последнее слово: ${escapeHtml(current.name)}</h3><p>Выбывший игрок ${state.speaking.index + 1} из ${speakers.length}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
-            <div class="phase-actions"><button class="btn primary" data-action="next-last-word">${state.speaking.index + 1 === speakers.length ? "К обсуждению →" : "Следующее последнее слово →"}</button></div>
+            <div class="action-title"><div><h3>Последнее слово: ${escapeHtml(current.name)}</h3><p>Выбывших уже выслушано: ${speakers.length} из ${(state.lastNightDeaths || []).length}</p></div><span class="timer">${formatTime(timerSeconds)}</span></div>
+            <div class="phase-actions"><button class="btn primary" data-action="next-last-word">Игрок закончил — выбрать следующего</button><button class="btn ghost" data-action="start-discussion">Закончить последние слова</button></div>
           </div>`;
+      }
+      function playerChoiceMarkup(id, players) {
+        return `<select id="${id}" class="field"><option value="">Выберите игрока</option>${players.map((player) =>
+          `<option value="${escapeHtml(player.id)}">${escapeHtml(player.name)}</option>`
+        ).join("")}</select>`;
       }
       function votePanel() {
         const eligible = alivePlayers();
@@ -495,7 +509,7 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           discussion: ["◉ Обсуждение", state.round === 0 ? "Круг знакомства" : `День ${state.round} · обсуждение`, state.round === 0 ? "Игроки знакомятся друг с другом за столом." : "Дайте городу обсудить ночь и подозрения.", state.round === 0 ? "Знакомство" : `Раунд ${state.round}`, discussionPanel],
           night: ["☾ Ночь", `Ночь ${state.round}`, "Город засыпает. Записывайте действия ролей по очереди; результаты увидит только ведущий.", `Раунд ${state.round}`, nightPanel],
           morning: ["☀ Утро", `Утро · раунд ${state.round}`, "Объявите игрокам результат ночи. Выбывшие смогут сказать последнее слово перед обсуждением.", `Раунд ${state.round}`, morningPanel],
-          lastWords: ["☀ Последние слова", `После ночи ${state.round}`, "Каждому выбывшему даётся по 30 секунд на последнее слово.", `${state.speaking.index + 1} / ${state.speaking.players.length}`, lastWordsPanel],
+          lastWords: ["☀ Последние слова", `После ночи ${state.round}`, "Каждому выбывшему даётся по 30 секунд на последнее слово.", state.speaking.currentId ? `${state.speaking.players.length} выбрано` : "Выбор игрока", lastWordsPanel],
           vote: ["⚖ Голосование", `Голосование · раунд ${state.round}`, "Отметьте решение города. При защите Капо большинство голосов не выгоняет игрока.", `Раунд ${state.round}`, votePanel],
           ended: ["✦ Игра окончена", "Партия завершена", "Итог определён по заданным условиям победы.", "Итог", endingPanel]
         };
@@ -562,45 +576,56 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
           return;
         }
         stopTimer();
-        state.speaking = { ...(state.speaking || {}), kind: "lastWords", players: deaths.slice(), index: 0, remaining: 30, fouls: state.speaking?.fouls || {} };
+        state.speaking = { ...(state.speaking || {}), kind: "lastWords", players: [], currentId: null, index: 0, remaining: 30, fouls: state.speaking?.fouls || {} };
         timerSeconds = 30;
         addLog(`Последние слова: каждому из ${deaths.length} выбывших отведено по 30 секунд.`);
         setPhase("lastWords");
-        toggleTimer();
       }
       function startDiscussion() {
         stopTimer();
         state.speaking = {
           ...(state.speaking || {}),
           kind: "discussion",
-          players: alivePlayers().map((player) => player.id),
+          players: [],
+          currentId: null,
           index: 0,
           remaining: 30,
           fouls: state.speaking?.fouls || {}
         };
         timerSeconds = 30;
-        addLog(state.round === 0 ? "Начался круг знакомства: каждому игроку дано 30 секунд." : `Началось обсуждение раунда ${state.round}: каждому игроку дано 30 секунд.`);
+        addLog(state.round === 0 ? "Начался круг знакомства. Ведущий выбирает, кто говорит первым." : `Началось обсуждение раунда ${state.round}. Ведущий выбирает порядок выступлений.`);
         setPhase("discussion");
-        toggleTimer();
       }
       function advanceSpeaker() {
         stopTimer();
-        state.speaking.index += 1;
+        const currentId = state.speaking.currentId;
+        if (currentId) addLog(`${state.speaking.kind === "lastWords" ? "Последнее слово завершено" : "Выступление завершено"}: ${label(currentId)}.`);
+        state.speaking.currentId = null;
+        state.speaking.index = state.speaking.players.length;
         state.speaking.remaining = 30;
         timerSeconds = 30;
-        if (state.speaking.index >= state.speaking.players.length) {
-          if (state.speaking.kind === "lastWords") {
-            startDiscussion();
-            return;
-          }
-          finishDiscussion();
-          return;
-        }
-        const player = playerById(state.speaking.players[state.speaking.index]);
-        addLog(`${state.speaking.kind === "lastWords" ? "Последнее слово" : "Слово"}: очередь игрока ${player?.name || ""}.`);
         save();
         render();
-        toggleTimer();
+      }
+      function selectSpeaker(lastWord = false) {
+        const id = $("#speakerChoice")?.value || "";
+        if (!id) {
+          showToast("Сначала выберите игрока.");
+          return;
+        }
+        const eligible = lastWord ? (state.lastNightDeaths || []) : alivePlayers().map((player) => player.id);
+        if (!eligible.includes(id) || state.speaking.players.includes(id)) {
+          showToast("Этот игрок уже выступил или сейчас не может говорить.");
+          return;
+        }
+        state.speaking.currentId = id;
+        state.speaking.players.push(id);
+        state.speaking.index = state.speaking.players.length - 1;
+        state.speaking.remaining = 30;
+        timerSeconds = 30;
+        addLog(`${lastWord ? "Последнее слово" : "Слово"}: ведущий выбрал игрока ${label(id)}.`);
+        save();
+        render();
       }
       function finishDiscussion() {
         stopTimer();
@@ -825,7 +850,6 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         state.speaking.remaining = timerSeconds;
         addLog(`Фол игроку ${label(playerId)}: +30 секунд. Всего фолов игрока: ${state.speaking.fouls[playerId]}.`);
         save();
-        if (!timerHandle) toggleTimer();
         renderRoster();
         updateTimerDisplay();
         syncTimerControls();
@@ -927,9 +951,11 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
         } else if (action === "to-vote") {
           state.phase = "vote"; addLog(`Началось голосование раунда ${state.round}.`); save(); render();
         } else if (action === "next-speaker" || action === "next-last-word") {
-          const playerId = state.speaking?.players?.[state.speaking.index];
-          if (playerId) addLog(`${state.speaking.kind === "lastWords" ? "Последнее слово завершено" : "Выступление завершено"}: ${label(playerId)}.`);
           advanceSpeaker();
+        } else if (action === "select-speaker") {
+          selectSpeaker(false);
+        } else if (action === "select-last-word") {
+          selectSpeaker(true);
         } else if (action === "finish-discussion") {
           finishDiscussion();
         } else if (action === "start-discussion") {
@@ -995,8 +1021,14 @@ button{color:inherit;}.app{width:min(1120px,100%);margin:auto;padding:20px 22px 
       playerRows(6);
       state = loadSaved();
       if (state) {
-        if (!state.speaking) state.speaking = { players: [], index: 0, fouls: {} };
+        if (!state.speaking) state.speaking = { players: [], currentId: null, index: 0, fouls: {} };
         if (!state.speaking.fouls) state.speaking.fouls = {};
+        if (!Object.prototype.hasOwnProperty.call(state.speaking, "currentId")) {
+          const oldPlayers = state.speaking.players || [];
+          const oldIndex = state.speaking.index || 0;
+          state.speaking.currentId = oldPlayers[oldIndex] || null;
+          state.speaking.players = oldPlayers.slice(0, state.speaking.currentId ? oldIndex + 1 : oldIndex);
+        }
         timerSeconds = Number.isInteger(state.speaking.remaining) ? state.speaking.remaining : 30;
         render();
       } else {
